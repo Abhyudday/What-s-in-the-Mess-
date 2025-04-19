@@ -5,7 +5,7 @@ import pytz
 
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 
-# Mess timetable
+# Mess schedule
 meal_schedule = {
     "Breakfast": (time(7, 30), time(8, 30)),
     "Lunch": (time(12, 20), time(14, 0)),
@@ -13,7 +13,7 @@ meal_schedule = {
     "Dinner": (time(19, 30), time(21, 0))
 }
 
-# Mess menu from image
+# Mess menu
 menu = {
     "monday": {
         "Breakfast": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
@@ -61,14 +61,14 @@ menu = {
 
 def get_today_menu(meal_type):
     today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
-    return menu.get(today, {}).get(meal_type, "No data for this meal.")
+    return menu.get(today, {}).get(meal_type, "😕 No data available for this meal.")
 
 def get_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
-    for meal, (start, end) in meal_schedule.items():
+    for meal, (start, _) in meal_schedule.items():
         if now < start:
             return meal
-    return "Breakfast (next day)"
+    return "Breakfast"  # Next day breakfast
 
 def build_meal_buttons():
     return InlineKeyboardMarkup([
@@ -80,8 +80,11 @@ def build_meal_buttons():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
+        "👋 Welcome to the *Mess Menu Bot!*\n\nClick the button below to check what’s in the mess right now:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]
+        ])
     )
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,11 +99,10 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
-    elif query.data in ["Breakfast", "Lunch", "Snacks", "Dinner"]:
-        meal = query.data
-        menu_text = get_today_menu(meal)
+    elif query.data in meal_schedule.keys():
+        menu_text = get_today_menu(query.data)
         await query.edit_message_text(
-            f"📅 *Today's {meal} Menu:*\n\n{menu_text}",
+            f"📅 *Today's {query.data} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
