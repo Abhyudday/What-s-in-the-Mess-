@@ -80,7 +80,7 @@ def build_meal_buttons():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Welcome to the *Mess Menu Bot!*\n\nClick the button below to check what’s in the mess right now:",
+        "👋 Welcome to the *Mess Menu Bot!*\n\nClick below to check what’s in the mess right now:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]
@@ -95,14 +95,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         next_meal = get_next_meal()
         menu_text = get_today_menu(next_meal)
         await query.edit_message_text(
-            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}",
+            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}\n\n*Disclaimer: Nutritional values are approximate.*",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
     elif query.data in meal_schedule.keys():
         menu_text = get_today_menu(query.data)
         await query.edit_message_text(
-            f"📅 *Today's {query.data} Menu:*\n\n{menu_text}",
+            f"📅 *Today's {query.data} Menu:*\n\n{menu_text}\n\n*Disclaimer: Nutritional values are approximate.*",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
@@ -113,3 +113,9 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(button_handler))
     print("🍽️ Mess Bot is live!")
     app.run_polling()
+
+
+
+
+
+
