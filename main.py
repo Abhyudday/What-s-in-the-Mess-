@@ -13,6 +13,14 @@ meal_schedule = {
     "Dinner": (time(19, 30), time(21, 0))
 }
 
+# Nutritional information for meals (values are in approximate units per serving)
+nutritional_values = {
+    "Breakfast": {"calories": 300, "protein": 8, "carbs": 45, "fats": 10},
+    "Lunch": {"calories": 600, "protein": 20, "carbs": 80, "fats": 25},
+    "Snacks": {"calories": 150, "protein": 3, "carbs": 25, "fats": 5},
+    "Dinner": {"calories": 500, "protein": 15, "carbs": 65, "fats": 18}
+}
+
 # Mess menu
 menu = {
     "monday": {
@@ -63,6 +71,15 @@ def get_today_menu(meal_type):
     today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
     return menu.get(today, {}).get(meal_type, "😕 No data available for this meal.")
 
+def get_nutritional_info(meal_type):
+    nutrition = nutritional_values.get(meal_type, {})
+    return (
+        f"🔶 *Calories:* {nutrition.get('calories', 0)} kcal\n"
+        f"🔶 *Protein:* {nutrition.get('protein', 0)} g\n"
+        f"🔶 *Carbs:* {nutrition.get('carbs', 0)} g\n"
+        f"🔶 *Fats:* {nutrition.get('fats', 0)} g"
+    )
+
 def get_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
     for meal, (start, _) in meal_schedule.items():
@@ -94,15 +111,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "next_meal":
         next_meal = get_next_meal()
         menu_text = get_today_menu(next_meal)
+        nutrition_text = get_nutritional_info(next_meal)
         await query.edit_message_text(
-            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}\n\n*Disclaimer: Nutritional values are approximate.*",
+            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}\n\n{nutrition_text}\n\n*Disclaimer: Nutritional values are approximate.*",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
     elif query.data in meal_schedule.keys():
-        menu_text = get_today_menu(query.data)
+        meal = query.data
+        menu_text = get_today_menu(meal)
+        nutrition_text = get_nutritional_info(meal)
         await query.edit_message_text(
-            f"📅 *Today's {query.data} Menu:*\n\n{menu_text}\n\n*Disclaimer: Nutritional values are approximate.*",
+            f"📅 *Today's {meal} Menu:*\n\n{menu_text}\n\n{nutrition_text}\n\n*Disclaimer: Nutritional values are approximate.*",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
@@ -113,9 +133,3 @@ if __name__ == '__main__':
     app.add_handler(CallbackQueryHandler(button_handler))
     print("🍽️ Mess Bot is live!")
     app.run_polling()
-
-
-
-
-
-
