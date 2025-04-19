@@ -1,5 +1,7 @@
 pyTelegramBotAPI==4.14.0
+python-telegram-bot
 python-dotenv==1.0.1
-python-telegram-bot==20.7
+python-telegram-bot==20.1
 requests==2.31.0
 pyTelegramBotAPI
+
