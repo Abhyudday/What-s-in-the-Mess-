@@ -92,7 +92,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         next_meal = get_next_meal()
         menu_text = get_today_menu(next_meal)
         await query.edit_message_text(
-            f"🍽️ Next Meal: *{next_meal}*\n\n📋 *Menu:*\n{menu_text}",
+            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
@@ -100,7 +100,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         meal = query.data
         menu_text = get_today_menu(meal)
         await query.edit_message_text(
-            f"📅 *Today's {meal}:*\n{menu_text}",
+            f"📅 *Today's {meal} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
