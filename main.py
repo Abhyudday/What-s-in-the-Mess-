@@ -3,7 +3,6 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from datetime import datetime, time
 import pytz
 
-
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
 
@@ -66,6 +65,16 @@ def get_today_menu(meal_type):
     menu_item = menu.get(today, {}).get(meal_type, {"items": "No data for this meal.", "protein": 0})
     return f"{menu_item['items']}\n\nApproximate Protein: {menu_item['protein']} grams"
 
+def get_menu_for_day(day):
+    day = day.lower()
+    if day not in menu:
+        return "❌ Invalid day. Please use one of: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday."
+    
+    result = f"📅 *Menu for {day.title()}*:\n\n"
+    for meal_type, data in menu[day].items():
+        result += f"*{meal_type}*\n{data['items']}\nProtein: {data['protein']}g\n\n"
+    return result
+
 def get_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
     for meal, (start, end) in meal_schedule.items():
@@ -84,14 +93,25 @@ def build_meal_buttons():
 # Command to start the bot and track user IDs
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_ids.add(user_id)  # Track unique user IDs
+    user_ids.add(user_id)
 
     await update.message.reply_text(
-        "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
+        "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:"
+        "\n\n🆕 *Tip:* You can also type `/menu <day>` (e.g. `/menu tuesday`) to see full menu for that day.",
+        parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
     )
 
-# Handler for the button press events
+# /menu command handler
+async def menu_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if context.args:
+        day = context.args[0]
+        text = get_menu_for_day(day)
+    else:
+        text = "❌ Please use the format: /menu <day>\nExample: `/menu monday`"
+    await update.message.reply_text(text, parse_mode="Markdown")
+
+# Button press handler
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -115,16 +135,15 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Admin command to check the number of unique users
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    total_users = len(user_ids)  # Get the count of unique user IDs
+    total_users = len(user_ids)
     await update.message.reply_text(f"Total users interacting with the bot: {total_users}")
 
 if __name__ == '__main__':
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("menu", menu_command))
     app.add_handler(CallbackQueryHandler(button_handler))
-
-    # Admin command to check user count
     app.add_handler(CommandHandler("user_count", user_count))
-
     print("🍽️ Mess Bot is live!")
     app.run_polling()
+
