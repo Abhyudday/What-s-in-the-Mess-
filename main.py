@@ -3,7 +3,9 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from datetime import datetime, time
 import pytz
 
+
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
+user_ids = set()
 
 # Mess timetable
 meal_schedule = {
@@ -79,12 +81,17 @@ def build_meal_buttons():
         [InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")],
     ])
 
+# Command to start the bot and track user IDs
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_ids.add(user_id)  # Track unique user IDs
+
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
     )
 
+# Handler for the button press events
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
@@ -106,9 +113,18 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=build_meal_buttons()
         )
 
+# Admin command to check the number of unique users
+async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    total_users = len(user_ids)  # Get the count of unique user IDs
+    await update.message.reply_text(f"Total users interacting with the bot: {total_users}")
+
 if __name__ == '__main__':
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
+
+    # Admin command to check user count
+    app.add_handler(CommandHandler("user_count", user_count))
+
     print("🍽️ Mess Bot is live!")
     app.run_polling()
