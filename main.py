@@ -98,6 +98,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:"
         "\n\n🆕 *Tip:* You can also type `/menu <day>` (e.g. `/menu tuesday`) to see full menu for that day.",
+        "\n\nTap here 👇🏿",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess Today", callback_data="next_meal")]])
     )
