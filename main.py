@@ -18,48 +18,49 @@ meal_schedule = {
 # Mess menu with protein content (in grams)
 menu = {
     "monday": {
-        "Breakfast": {"items": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits", "protein": 10},
-        "Lunch": {"items": "Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2", "protein": 18},
-        "Snacks": {"items": "Aaloo Tikki/Papdi Chat (5 pc) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Tea", "protein": 12},
-        "Dinner": {"items": "Arhar Dal + Aloo Palak + Rice + Suji Halwa / Kheer (+Matar Mushroom once/month) + Moong Dal Halwa (once/month) + Onion Salad", "protein": 22}
+        "Breakfast": {"items": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits", "protein": 16},
+        "Lunch": {"items": "Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2", "protein": 26},
+        "Snacks": {"items": "Aaloo Tikki/Papdi Chat (5 pc) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Tea", "protein": 10},
+        "Dinner": {"items": "Arhar Dal + Aloo Palak + Rice + Suji Halwa / Kheer (+Matar Mushroom once/month) + Moong Dal Halwa (once/month) + Onion Salad", "protein": 24}
     },
     "tuesday": {
         "Breakfast": {"items": "Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits", "protein": 14},
-        "Lunch": {"items": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney", "protein": 16},
-        "Snacks": {"items": "Chowmein / Pasta + Tomato Sauce + Chili Sauce + Coffee", "protein": 10},
-        "Dinner": {"items": "Kali Massor Dal + Aloo Beans + Rice + Roti + Ice Cream (Strawberry/Butterscotch/Chocolate/Mango) + Onion Salad", "protein": 21}
+        "Lunch": {"items": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney", "protein": 19},
+        "Snacks": {"items": "Chowmein / Pasta + Tomato Sauce + Chili Sauce + Coffee", "protein": 6},
+        "Dinner": {"items": "Kali Massor Dal + Aloo Beans + Rice + Roti + Ice Cream (Strawberry/Butterscotch/Chocolate/Mango) + Onion Salad", "protein": 23}
     },
     "wednesday": {
-        "Breakfast": {"items": "Plain Paratha + Aloo Tamater Sabji + Pickle + Tea + Milk + Seasonal Fruits", "protein": 12},
-        "Lunch": {"items": "Kaabli Chole (small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2", "protein": 20},
-        "Snacks": {"items": "Samosa + Chili Sauce + Sonth + Tea", "protein": 6},
-        "Dinner": {"items": "(Mattar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulaw + Onion Salad", "protein": 28}
+        "Breakfast": {"items": "Plain Paratha + Aloo Tamater Sabji + Pickle + Tea + Milk + Seasonal Fruits", "protein": 13},
+        "Lunch": {"items": "Kaabli Chole (small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2", "protein": 24},
+        "Snacks": {"items": "Samosa + Chili Sauce + Sonth + Tea", "protein": 5},
+        "Dinner": {"items": "(Mattar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulaw + Onion Salad", "protein": 27}
     },
     "thursday": {
-        "Breakfast": {"items": "Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits", "protein": 10},
-        "Lunch": {"items": "Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2", "protein": 15},
-        "Snacks": {"items": "Bread Pakoda / Rusk (6 pcs) + Sonath + Hari Chutney + Tea", "protein": 8},
+        "Breakfast": {"items": "Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits", "protein": 12},
+        "Lunch": {"items": "Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2", "protein": 17},
+        "Snacks": {"items": "Bread Pakoda / Rusk (6 pcs) + Sonath + Hari Chutney + Tea", "protein": 7},
         "Dinner": {"items": "Aloo Gobhi Mattar with Gravy + Chana Dal + Roti + Rice + Gulab Jamun + Onion Salad", "protein": 22}
     },
     "friday": {
-        "Breakfast": {"items": "Aloo Pyaj Paratha + Pickle + Curd + Tea + Seasonal Fruits", "protein": 14},
-        "Lunch": {"items": "Aloo Gobhi Mattar + Arhar Dal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2", "protein": 20},
+        "Breakfast": {"items": "Aloo Pyaj Paratha + Pickle + Curd + Tea + Seasonal Fruits", "protein": 16},
+        "Lunch": {"items": "Aloo Gobhi Mattar + Arhar Dal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2", "protein": 25},
         "Snacks": {"items": "Patties + Tomato Sauce + Coffee", "protein": 5},
-        "Dinner": {"items": "Lauki Kofta + Mix Veg + Arhar Dal + Aloo Soyabeen + Onion Rice + Roti + Besan Ladoo + Onion Salad", "protein": 25}
+        "Dinner": {"items": "Lauki Kofta + Mix Veg + Arhar Dal + Aloo Soyabeen + Onion Rice + Roti + Besan Ladoo + Onion Salad", "protein": 28}
     },
     "saturday": {
-        "Breakfast": {"items": "Aloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits", "protein": 12},
-        "Lunch": {"items": "Louki Fry + Arhar Dal + Roti + Rice + Salad + Curd + Lemon 1/2", "protein": 18},
-        "Snacks": {"items": "Namkeen Jave / Poha + Chili Sauce + Tomato Sauce + Coffee", "protein": 7},
-        "Dinner": {"items": "Rajma + Aloo Bhujia + Jeera Rice + Roti + Onion Salad", "protein": 21}
+        "Breakfast": {"items": "Aloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits", "protein": 14},
+        "Lunch": {"items": "Louki Fry + Arhar Dal + Roti + Rice + Salad + Curd + Lemon 1/2", "protein": 20},
+        "Snacks": {"items": "Namkeen Jave / Poha + Chili Sauce + Tomato Sauce + Coffee", "protein": 6},
+        "Dinner": {"items": "Rajma + Aloo Bhujia + Jeera Rice + Roti + Onion Salad", "protein": 22}
     },
     "sunday": {
-        "Breakfast": {"items": "Rosted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes + Milk + Tea + Seasonal Fruits", "protein": 12},
-        "Lunch": {"items": "Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaz + Jeera Rice + Cold Drink + Pickle + Veg Raita", "protein": 22},
+        "Breakfast": {"items": "Rosted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes + Milk + Tea + Seasonal Fruits", "protein": 13},
+        "Lunch": {"items": "Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaz + Jeera Rice + Cold Drink + Pickle + Veg Raita", "protein": 27},
         "Snacks": {"items": "OFF", "protein": 0},
-        "Dinner": {"items": "Mix Dal + Aloo Kala Chana + Roti + Rice + Sewai + Onion Salad", "protein": 20}
+        "Dinner": {"items": "Mix Dal + Aloo Kala Chana + Roti + Rice + Sewai + Onion Salad", "protein": 22}
     },
 }
+
 
 def get_today_menu(meal_type):
     today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
