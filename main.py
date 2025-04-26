@@ -1,23 +1,21 @@
-
-import logging
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from datetime import datetime
+from datetime import datetime, time
+import pytz
+
 
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
+user_ids = set()
 
-# Enable logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
-logger = logging.getLogger(__name__)
+# Mess timetable
+meal_schedule = {
+    "Breakfast": (time(7, 30), time(8, 30)),
+    "Lunch": (time(12, 20), time(14, 0)),
+    "Snacks": (time(17, 0), time(18, 0)),
+    "Dinner": (time(19, 30), time(21, 0))
+}
 
-# In-memory storage
-user_data = {}
-user_count = 0
-
-# Mess Menu
+# Mess menu with protein content (in grams)
 menu = {
     "Monday": {
         "Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
@@ -63,71 +61,70 @@ menu = {
     }
 }
 
-meal_times = {
-    "Breakfast": (7, 9),
-    "Lunch": (12, 14),
-    "Snacks": (16, 17),
-    "Dinner": (19, 21),
-}
+def get_today_menu(meal_type):
+    today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
+    menu_item = menu.get(today, {}).get(meal_type, {"items": "No data for this meal.", "protein": 0})
+    return f"{menu_item['items']}\n\nApproximate Protein: {menu_item['protein']} grams"
 
-def get_current_meal():
-    now = datetime.now()
-    current_hour = now.hour
-    current_minute = now.minute
-
-    for meal, (start_hour, end_hour) in meal_times.items():
-        if (current_hour == start_hour and current_minute >= 0) or (start_hour < current_hour < end_hour) or (current_hour == end_hour and current_minute == 0):
+def get_next_meal():
+    now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
+    for meal, (start, end) in meal_schedule.items():
+        if now < start:
             return meal
-    if current_hour < 7:
-        return "Breakfast"
-    elif current_hour < 12:
-        return "Lunch"
-    elif current_hour < 16:
-        return "Snacks"
-    elif current_hour < 19:
-        return "Dinner"
-    else:
-        return "Breakfast"
+    return "Breakfast (next day)"
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    global user_count
-    user_id = update.effective_user.id
-    if user_id not in user_data:
-        user_data[user_id] = True
-        user_count += 1
+def build_meal_buttons():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🥣 Breakfast", callback_data="Breakfast")],
+        [InlineKeyboardButton("🍛 Lunch", callback_data="Lunch")],
+        [InlineKeyboardButton("🍪 Snacks", callback_data="Snacks")],
+        [InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")],
+    ])
 
-    keyboard = [
-        [InlineKeyboardButton("📋 What's in Mess?", callback_data='mess')],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text('👋 Welcome to the Mess Menu Bot!', reply_markup=reply_markup)
+# Command to start the bot and track user IDs
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.message.from_user.id
+    user_ids.add(user_id)  # Track unique user IDs
 
-async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    await update.message.reply_text(
+        "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
+    )
+
+# Handler for the button press events
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    user_id = query.from_user.id
-    if user_id not in user_data:
-        user_data[user_id] = True
+    if query.data == "next_meal":
+        next_meal = get_next_meal()
+        menu_text = get_today_menu(next_meal)
+        await query.edit_message_text(
+            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}",
+            parse_mode="Markdown",
+            reply_markup=build_meal_buttons()
+        )
+    elif query.data in ["Breakfast", "Lunch", "Snacks", "Dinner"]:
+        meal = query.data
+        menu_text = get_today_menu(meal)
+        await query.edit_message_text(
+            f"📅 *Today's {meal} Menu:*\n\n{menu_text}",
+            parse_mode="Markdown",
+            reply_markup=build_meal_buttons()
+        )
 
-    if query.data == 'mess':
-        day = datetime.now().strftime("%A")
-        meal = get_current_meal()
-        today_menu = menu.get(day, {})
-        meal_info = today_menu.get(meal, "❌ No info available.")
-        await query.edit_message_text(text=f"📅 Today is {day}.\n🍴 Current Meal: {meal}\n\n📜 Menu:\n{meal_info}")
-
-async def user_count_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text(f"👥 Total Unique Users: {user_count}")
-
-def main() -> None:
-    application = Application.builder().token(BOT_TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("user_count", user_count_command))
-    application.add_handler(CallbackQueryHandler(button))
-
-    application.run_polling()
+# Admin command to check the number of unique users
+async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    total_users = len(user_ids)  # Get the count of unique user IDs
+    await update.message.reply_text(f"Total users interacting with the bot: {total_users}")
 
 if __name__ == '__main__':
-    main()
+    app = Application.builder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CallbackQueryHandler(button_handler))
+
+    # Admin command to check user count
+    app.add_handler(CommandHandler("user_count", user_count))
+
+    print("🍽️ Mess Bot is live!")
+    app.run_polling()
