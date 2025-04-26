@@ -82,7 +82,14 @@ def build_meal_buttons():
         [InlineKeyboardButton("🍛 Lunch", callback_data="Lunch")],
         [InlineKeyboardButton("🍪 Snacks", callback_data="Snacks")],
         [InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")],
+        [InlineKeyboardButton("📅 Choose a Day", callback_data="choose_day")],
     ])
+
+def build_day_buttons():
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    buttons = [[InlineKeyboardButton(day, callback_data=day)] for day in days]
+    buttons.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(buttons)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
@@ -113,6 +120,25 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
+    elif query.data == "choose_day":
+        await query.edit_message_text(
+            "📅 *Choose a Day for Menu:*",
+            reply_markup=build_day_buttons()
+        )
+    elif query.data in ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]:
+        day = query.data
+        meal = get_current_or_next_meal()
+        menu_text = menu.get(day, {}).get(meal, "No data for this meal.")
+        await query.edit_message_text(
+            f"📅 *{day}'s {meal} Menu:*\n\n{menu_text}",
+            parse_mode="Markdown",
+            reply_markup=build_meal_buttons()
+        )
+    elif query.data == "back_to_main":
+        await query.edit_message_text(
+            "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
+        )
 
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     total_users = len(user_ids)
@@ -126,4 +152,3 @@ if __name__ == '__main__':
 
     print("🍽️ Mess Bot is live!")
     app.run_polling()
-
