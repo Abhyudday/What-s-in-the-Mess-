@@ -1,45 +1,49 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from datetime import datetime, time
-import pytz
+
+
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from datetime import datetime
+
+
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
+# ====================================
 
 # Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
 logger = logging.getLogger(__name__)
 
 # In-memory storage
 user_data = {}
 user_count = 0
 
-# Updated Mess Menu (No protein info)
+# Mess Menu
 menu = {
     "Monday": {
         "Breakfast": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
         "Lunch": "Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2",
-        "Snacks": "Aaloo Tikki / Papdi Chat (5 piece) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Roohafza",
-        "Dinner": "Arahar Daal + Bhindi + Rice + Roti + Suji Halwa (Matar Mushroom once in a month / Moong Daal Halwa once in a month) + Onion Salad"
+        "Snacks": "Aaloo Tikki / Papdi Chat + Matar + Curd + Sonth + Hari Chutney + Roohafza",
+        "Dinner": "Arahar Daal + Bhindi + Rice + Roti + Suji Halwa + Onion Salad"
     },
     "Tuesday": {
         "Breakfast": "Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits",
-        "Lunch": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney",
+        "Lunch": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2",
         "Snacks": "Chowmein / Pasta + Tomato Sauce + Chili Sauce + Shikanji",
-        "Dinner": "Kali Massor Daal + Kathal + Rice + Roti + Ice Cream (Mango / Butterscotch / Vanilla) + Onion Salad"
+        "Dinner": "Kali Massor Daal + Kathal + Rice + Roti + Ice Cream + Onion Salad"
     },
     "Wednesday": {
         "Breakfast": "Aloo Paratha + Pickle + Curd + Milk + Tea + Seasonal Fruits",
-        "Lunch": "Kaabli Chhole (Small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
+        "Lunch": "Kaabli Chhole + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
         "Snacks": "Samosa + Chili Sauce + Sonath + Tea",
         "Dinner": "(Matar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulav + Onion Salad"
     },
     "Thursday": {
         "Breakfast": "Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits",
         "Lunch": "Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2",
-        "Snacks": "Bread Pakoda / Rusk (5 pcs) + Sonath + Hari Chatney + Tea",
+        "Snacks": "Bread Pakoda / Rusk + Sonath + Hari Chatney + Tea",
         "Dinner": "Chana Dal + Aloo Parval + Roti + Rice + Gulab Jamun + Masala Chaach"
     },
     "Friday": {
@@ -55,8 +59,8 @@ menu = {
         "Dinner": "Rajma + Aaloo Bhujia + Jeera Rice + Roti + Masala Chaach"
     },
     "Sunday": {
-        "Breakfast": "Rosted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes Milk + Tea + Seasonal Fruits",
-        "Lunch": "Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
+        "Breakfast": "Roasted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes Milk + Tea + Seasonal Fruits",
+        "Lunch": "Chole + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
         "Snacks": "OFF",
         "Dinner": "Mix Dal + Aaloo Kala Chana / Arbi + Roti + Rice + Kheer / Sewai + Onion Salad"
     }
@@ -87,7 +91,7 @@ def get_current_meal():
     elif current_hour < 19:
         return "Dinner"
     else:
-        return "Breakfast"  # After dinner, next is breakfast
+        return "Breakfast"
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     global user_count
@@ -123,7 +127,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await query.edit_message_text(text=f"Total Unique Users: {user_count}")
 
 def main() -> None:
-    application = Application.builder().token("YOUR_BOT_TOKEN_HERE").build()
+    application = Application.builder().token(BOT_TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CallbackQueryHandler(button))
@@ -133,7 +137,3 @@ def main() -> None:
 if __name__ == '__main__':
     main()
 
-    app.add_handler(CommandHandler("user_count", user_count))
-
-    print("🍽️ Mess Bot is live!")
-    app.run_polling()
