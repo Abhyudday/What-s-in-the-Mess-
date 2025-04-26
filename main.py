@@ -16,14 +16,50 @@ meal_schedule = {
 
 # Mess menu
 menu = {
-    "Monday":    { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Tuesday":   { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Wednesday": { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Thursday":  { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Friday":    { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Saturday":  { "Breakfast": "...", "Lunch": "...", "Snacks": "...", "Dinner": "..." },
-    "Sunday":    { "Breakfast": "...", "Lunch": "...", "Snacks": "🚫 OFF", "Dinner": "..." }
+"Monday": {
+"Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
+"Lunch": "🍛 Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2",
+"Snacks": "🍟 Aaloo Tikki / Papdi Chat + Matar + Curd + Sonth + Hari Chutney + Roohafza",
+"Dinner": "🍚 Arahar Daal + Bhindi + Rice + Roti + Suji Halwa + Onion Salad"
+},
+"Tuesday": {
+"Breakfast": "🍽️ Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits",
+"Lunch": "🍛 Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2",
+"Snacks": "🍝 Chowmein / Pasta + Tomato Sauce + Chili Sauce + Shikanji",
+"Dinner": "🍚 Kali Massor Daal + Kathal + Rice + Roti + Ice Cream + Onion Salad"
+},
+"Wednesday": {
+"Breakfast": "🍽️ Aloo Paratha + Pickle + Curd + Milk + Tea + Seasonal Fruits",
+"Lunch": "🍛 Kaabli Chhole + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
+"Snacks": "🥟 Samosa + Chili Sauce + Sonath + Tea",
+"Dinner": "🍚 (Matar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulav + Onion Salad"
+},
+"Thursday": {
+"Breakfast": "🍽️ Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits",
+"Lunch": "🍛 Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2",
+"Snacks": "🍞 Bread Pakoda / Rusk + Sonath + Hari Chatney + Tea",
+"Dinner": "🍚 Chana Dal + Aloo Parval + Roti + Rice + Gulab Jamun + Masala Chaach"
+},
+"Friday": {
+"Breakfast": "🍽️ Aaloo Pyaaj Paratha + Pickle + Curd + Tea + Seasonal Fruits",
+"Lunch": "🍛 Aaloo Gobhi Mattar + Arhar Daal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2",
+"Snacks": "🥐 Patties + Tomato Sauce + Tea",
+"Dinner": "🍚 Arhar Dal + Aaloo Soyabean / Karela + Rice + Roti + Besan Ladoo + Masala Chaach"
+},
+"Saturday": {
+"Breakfast": "🍽️ Aaloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits",
+"Lunch": "🍛 Louki Dry + Arhar Dal + Roti + Rice + Salad + Curd + Lemon 1/2",
+"Snacks": "🍛 Poha + Chili Sauce + Tomato Sauce + Chat Masala + Shikanji",
+"Dinner": "🍚 Rajma + Aaloo Bhujia + Jeera Rice + Roti + Masala Chaach"
+},
+"Sunday": {
+"Breakfast": "🍽️ Roasted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes Milk + Tea + Seasonal Fruits",
+"Lunch": "🍛 Chole + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
+"Snacks": "🚫 OFF",
+"Dinner": "🍚 Mix Dal + Aaloo Kala Chana / Arbi + Roti + Rice + Kheer / Sewai + Onion Salad"
 }
+}
+
 
 def get_current_or_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
