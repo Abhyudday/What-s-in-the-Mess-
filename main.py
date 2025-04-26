@@ -2,129 +2,137 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from datetime import datetime, time
 import pytz
-
-
+import logging
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from datetime import datetime
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
-user_ids = set()
 
-# Mess timetable
-meal_schedule = {
-    "Breakfast": (time(7, 30), time(8, 30)),
-    "Lunch": (time(12, 20), time(14, 0)),
-    "Snacks": (time(17, 0), time(18, 0)),
-    "Dinner": (time(19, 30), time(21, 0))
-}
+# Enable logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Mess menu with protein content (in grams)
+# In-memory storage
+user_data = {}
+user_count = 0
+
+# Updated Mess Menu (No protein info)
 menu = {
-    "monday": {
-        "Breakfast": {"items": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits", "protein": 16},
-        "Lunch": {"items": "Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2", "protein": 26},
-        "Snacks": {"items": "Aaloo Tikki/Papdi Chat (5 pc) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Tea", "protein": 10},
-        "Dinner": {"items": "Arhar Dal + Aloo Palak + Rice + Suji Halwa / Kheer (+Matar Mushroom once/month) + Moong Dal Halwa (once/month) + Onion Salad", "protein": 24}
+    "Monday": {
+        "Breakfast": "Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
+        "Lunch": "Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2",
+        "Snacks": "Aaloo Tikki / Papdi Chat (5 piece) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Roohafza",
+        "Dinner": "Arahar Daal + Bhindi + Rice + Roti + Suji Halwa (Matar Mushroom once in a month / Moong Daal Halwa once in a month) + Onion Salad"
     },
-    "tuesday": {
-        "Breakfast": {"items": "Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits", "protein": 14},
-        "Lunch": {"items": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney", "protein": 19},
-        "Snacks": {"items": "Chowmein / Pasta + Tomato Sauce + Chili Sauce + Coffee", "protein": 6},
-        "Dinner": {"items": "Kali Massor Dal + Aloo Beans + Rice + Roti + Ice Cream (Strawberry/Butterscotch/Chocolate/Mango) + Onion Salad", "protein": 23}
+    "Tuesday": {
+        "Breakfast": "Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits",
+        "Lunch": "Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney",
+        "Snacks": "Chowmein / Pasta + Tomato Sauce + Chili Sauce + Shikanji",
+        "Dinner": "Kali Massor Daal + Kathal + Rice + Roti + Ice Cream (Mango / Butterscotch / Vanilla) + Onion Salad"
     },
-    "wednesday": {
-        "Breakfast": {"items": "Plain Paratha + Aloo Tamater Sabji + Pickle + Tea + Milk + Seasonal Fruits", "protein": 13},
-        "Lunch": {"items": "Kaabli Chole (small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2", "protein": 24},
-        "Snacks": {"items": "Samosa + Chili Sauce + Sonth + Tea", "protein": 5},
-        "Dinner": {"items": "(Mattar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulaw + Onion Salad", "protein": 27}
+    "Wednesday": {
+        "Breakfast": "Aloo Paratha + Pickle + Curd + Milk + Tea + Seasonal Fruits",
+        "Lunch": "Kaabli Chhole (Small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
+        "Snacks": "Samosa + Chili Sauce + Sonath + Tea",
+        "Dinner": "(Matar/Kadahi) Paneer + Aloo Began Tomato Chokha + Puri + Pulav + Onion Salad"
     },
-    "thursday": {
-        "Breakfast": {"items": "Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits", "protein": 12},
-        "Lunch": {"items": "Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2", "protein": 17},
-        "Snacks": {"items": "Bread Pakoda / Rusk (6 pcs) + Sonath + Hari Chutney + Tea", "protein": 7},
-        "Dinner": {"items": "Aloo Gobhi Mattar with Gravy + Chana Dal + Roti + Rice + Gulab Jamun + Onion Salad", "protein": 22}
+    "Thursday": {
+        "Breakfast": "Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits",
+        "Lunch": "Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2",
+        "Snacks": "Bread Pakoda / Rusk (5 pcs) + Sonath + Hari Chatney + Tea",
+        "Dinner": "Chana Dal + Aloo Parval + Roti + Rice + Gulab Jamun + Masala Chaach"
     },
-    "friday": {
-        "Breakfast": {"items": "Aloo Pyaj Paratha + Pickle + Curd + Tea + Seasonal Fruits", "protein": 16},
-        "Lunch": {"items": "Aloo Gobhi Mattar + Arhar Dal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2", "protein": 25},
-        "Snacks": {"items": "Patties + Tomato Sauce + Coffee", "protein": 5},
-        "Dinner": {"items": "Lauki Kofta + Mix Veg + Arhar Dal + Aloo Soyabeen + Onion Rice + Roti + Besan Ladoo + Onion Salad", "protein": 28}
+    "Friday": {
+        "Breakfast": "Aaloo Pyaaj Paratha + Pickle + Curd + Tea + Seasonal Fruits",
+        "Lunch": "Aaloo Gobhi Mattar + Arhar Daal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2",
+        "Snacks": "Patties + Tomato Sauce + Tea",
+        "Dinner": "Arhar Dal + Aaloo Soyabean / Karela + Rice + Roti + Besan Ladoo + Masala Chaach"
     },
-    "saturday": {
-        "Breakfast": {"items": "Aloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits", "protein": 14},
-        "Lunch": {"items": "Louki Fry + Arhar Dal + Roti + Rice + Salad + Curd + Lemon 1/2", "protein": 20},
-        "Snacks": {"items": "Namkeen Jave / Poha + Chili Sauce + Tomato Sauce + Coffee", "protein": 6},
-        "Dinner": {"items": "Rajma + Aloo Bhujia + Jeera Rice + Roti + Onion Salad", "protein": 22}
+    "Saturday": {
+        "Breakfast": "Aaloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits",
+        "Lunch": "Louki Dry + Arhar Dal + Roti + Rice + Salad + Curd + Lemon 1/2",
+        "Snacks": "Poha + Chili Sauce + Tomato Sauce + Chat Masala + Shikanji",
+        "Dinner": "Rajma + Aaloo Bhujia + Jeera Rice + Roti + Masala Chaach"
     },
-    "sunday": {
-        "Breakfast": {"items": "Rosted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes + Milk + Tea + Seasonal Fruits", "protein": 13},
-        "Lunch": {"items": "Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaz + Jeera Rice + Cold Drink + Pickle + Veg Raita", "protein": 27},
-        "Snacks": {"items": "OFF", "protein": 0},
-        "Dinner": {"items": "Mix Dal + Aloo Kala Chana + Roti + Rice + Sewai + Onion Salad", "protein": 22}
-    },
+    "Sunday": {
+        "Breakfast": "Rosted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes Milk + Tea + Seasonal Fruits",
+        "Lunch": "Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
+        "Snacks": "OFF",
+        "Dinner": "Mix Dal + Aaloo Kala Chana / Arbi + Roti + Rice + Kheer / Sewai + Onion Salad"
+    }
 }
 
+meal_times = {
+    "Breakfast": (7, 9),
+    "Lunch": (12, 14),
+    "Snacks": (16, 17),
+    "Dinner": (19, 21),
+}
 
-def get_today_menu(meal_type):
-    today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
-    menu_item = menu.get(today, {}).get(meal_type, {"items": "No data for this meal.", "protein": 0})
-    return f"{menu_item['items']}\n\nApproximate Protein: {menu_item['protein']} grams"
+def get_current_meal():
+    now = datetime.now()
+    current_hour = now.hour
+    current_minute = now.minute
 
-def get_next_meal():
-    now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
-    for meal, (start, end) in meal_schedule.items():
-        if now < start:
+    for meal, (start_hour, end_hour) in meal_times.items():
+        if (current_hour == start_hour and current_minute >= 0) or (start_hour < current_hour < end_hour) or (current_hour == end_hour and current_minute == 0):
             return meal
-    return "Breakfast (next day)"
+    # If no meal ongoing, return next meal
+    if current_hour < 7:
+        return "Breakfast"
+    elif current_hour < 12:
+        return "Lunch"
+    elif current_hour < 16:
+        return "Snacks"
+    elif current_hour < 19:
+        return "Dinner"
+    else:
+        return "Breakfast"  # After dinner, next is breakfast
 
-def build_meal_buttons():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🥣 Breakfast", callback_data="Breakfast")],
-        [InlineKeyboardButton("🍛 Lunch", callback_data="Lunch")],
-        [InlineKeyboardButton("🍪 Snacks", callback_data="Snacks")],
-        [InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")],
-    ])
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global user_count
+    user_id = update.effective_user.id
+    if user_id not in user_data:
+        user_data[user_id] = True
+        user_count += 1
 
-# Command to start the bot and track user IDs
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.message.from_user.id
-    user_ids.add(user_id)  # Track unique user IDs
+    keyboard = [
+        [InlineKeyboardButton("What's in Mess?", callback_data='mess')],
+        [InlineKeyboardButton(f"Total Users: {user_count}", callback_data='users')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Welcome to the Mess Menu Bot!', reply_markup=reply_markup)
 
-    await update.message.reply_text(
-        "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
-    )
-
-# Handler for the button press events
-async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    global user_count
     query = update.callback_query
     await query.answer()
 
-    if query.data == "next_meal":
-        next_meal = get_next_meal()
-        menu_text = get_today_menu(next_meal)
-        await query.edit_message_text(
-            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}",
-            parse_mode="Markdown",
-            reply_markup=build_meal_buttons()
-        )
-    elif query.data in ["Breakfast", "Lunch", "Snacks", "Dinner"]:
-        meal = query.data
-        menu_text = get_today_menu(meal)
-        await query.edit_message_text(
-            f"📅 *Today's {meal} Menu:*\n\n{menu_text}",
-            parse_mode="Markdown",
-            reply_markup=build_meal_buttons()
-        )
+    user_id = query.from_user.id
+    if user_id not in user_data:
+        user_data[user_id] = True
+        user_count += 1
 
-# Admin command to check the number of unique users
-async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    total_users = len(user_ids)  # Get the count of unique user IDs
-    await update.message.reply_text(f"Total users interacting with the bot: {total_users}")
+    if query.data == 'mess':
+        day = datetime.now().strftime("%A")
+        meal = get_current_meal()
+        today_menu = menu.get(day, {})
+        meal_info = today_menu.get(meal, "No info available.")
+        await query.edit_message_text(text=f"Today is {day}.\nCurrent Meal: {meal}\n\nMenu:\n{meal_info}")
+    elif query.data == 'users':
+        await query.edit_message_text(text=f"Total Unique Users: {user_count}")
+
+def main() -> None:
+    application = Application.builder().token("YOUR_BOT_TOKEN_HERE").build()
+
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(button))
+
+    application.run_polling()
 
 if __name__ == '__main__':
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
+    main()
 
-    # Admin command to check user count
     app.add_handler(CommandHandler("user_count", user_count))
 
     print("🍽️ Mess Bot is live!")
