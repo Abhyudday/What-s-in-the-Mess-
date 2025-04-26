@@ -3,7 +3,6 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from datetime import datetime, time
 import pytz
 
-
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
 
@@ -15,7 +14,7 @@ meal_schedule = {
     "Dinner": (time(19, 30), time(21, 0))
 }
 
-# Mess menu with protein content (in grams)
+# Mess menu
 menu = {
     "Monday": {
         "Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
@@ -62,16 +61,21 @@ menu = {
 }
 
 def get_today_menu(meal_type):
-    today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A").lower()
-    menu_item = menu.get(today, {}).get(meal_type, {"items": "No data for this meal.", "protein": 0})
-    return f"{menu_item['items']}\n\nApproximate Protein: {menu_item['protein']} grams"
+    today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
+    today_menu = menu.get(today, {})
+    menu_item = today_menu.get(meal_type, "No data for this meal.")
+    return menu_item
 
-def get_next_meal():
+def get_current_or_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
     for meal, (start, end) in meal_schedule.items():
+        if start <= now <= end:
+            return meal  # Current ongoing meal
+    # If no meal is ongoing, find next meal
+    for meal, (start, _) in meal_schedule.items():
         if now < start:
             return meal
-    return "Breakfast (next day)"
+    return "Breakfast"  # If time passed Dinner, show next day's breakfast
 
 def build_meal_buttons():
     return InlineKeyboardMarkup([
@@ -81,26 +85,24 @@ def build_meal_buttons():
         [InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")],
     ])
 
-# Command to start the bot and track user IDs
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.message.from_user.id
-    user_ids.add(user_id)  # Track unique user IDs
+    user_ids.add(user_id)
 
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!\nClick below to check what’s in the mess now:",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")]])
     )
 
-# Handler for the button press events
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
     if query.data == "next_meal":
-        next_meal = get_next_meal()
-        menu_text = get_today_menu(next_meal)
+        current_or_next_meal = get_current_or_next_meal()
+        menu_text = get_today_menu(current_or_next_meal)
         await query.edit_message_text(
-            f"🍽️ *Today's {next_meal} Menu:*\n\n{menu_text}",
+            f"🍽️ *Today's {current_or_next_meal} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
@@ -113,17 +115,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=build_meal_buttons()
         )
 
-# Admin command to check the number of unique users
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    total_users = len(user_ids)  # Get the count of unique user IDs
+    total_users = len(user_ids)
     await update.message.reply_text(f"Total users interacting with the bot: {total_users}")
 
 if __name__ == '__main__':
     app = Application.builder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
-
-    # Admin command to check user count
     app.add_handler(CommandHandler("user_count", user_count))
 
     print("🍽️ Mess Bot is live!")
