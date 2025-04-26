@@ -64,18 +64,17 @@ def get_today_menu(meal_type):
     today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
     today_menu = menu.get(today, {})
     menu_item = today_menu.get(meal_type, "No data for this meal.")
-    return menu_item
+    return today, menu_item
 
 def get_current_or_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
     for meal, (start, end) in meal_schedule.items():
         if start <= now <= end:
             return meal  # Current ongoing meal
-    # If no meal is ongoing, find next meal
     for meal, (start, _) in meal_schedule.items():
         if now < start:
             return meal
-    return "Breakfast"  # If time passed Dinner, show next day's breakfast
+    return "Breakfast"  # After Dinner, show Breakfast for next day
 
 def build_meal_buttons():
     return InlineKeyboardMarkup([
@@ -100,17 +99,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data == "next_meal":
         current_or_next_meal = get_current_or_next_meal()
-        menu_text = get_today_menu(current_or_next_meal)
+        day, menu_text = get_today_menu(current_or_next_meal)
         await query.edit_message_text(
-            f"🍽️ *Today's {current_or_next_meal} Menu:*\n\n{menu_text}",
+            f"🍽️ *{day}'s {current_or_next_meal} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
     elif query.data in ["Breakfast", "Lunch", "Snacks", "Dinner"]:
         meal = query.data
-        menu_text = get_today_menu(meal)
+        day, menu_text = get_today_menu(meal)
         await query.edit_message_text(
-            f"📅 *Today's {meal} Menu:*\n\n{menu_text}",
+            f"📅 *{day}'s {meal} Menu:*\n\n{menu_text}",
             parse_mode="Markdown",
             reply_markup=build_meal_buttons()
         )
@@ -127,3 +126,4 @@ if __name__ == '__main__':
 
     print("🍽️ Mess Bot is live!")
     app.run_polling()
+
