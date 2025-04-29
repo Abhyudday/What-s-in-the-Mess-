@@ -13,51 +13,51 @@ meal_schedule = {
     "Snacks": (time(17, 0), time(18, 0)),
     "Dinner": (time(19, 30), time(21, 0))
 }
-
 menu = {
 "Monday": {
-"Breakfast": "🥣 Milk + Cornflakes + Banana / Apple",
-"Lunch": "🍛 Rajma + Rice + Roti + Mix Veg + Mix Salad + Lemon 1/2",
-"Snacks": "🥪 Veg Sandwich + Green Chutney + Tea",
-"Dinner": "🍚 Arahar Daal + Bhindi + Rice + Roti + Suji Halwa + Matar Mushroom (once a month) / Moong Daal Halwa (once a month) + Onion Salad"
+"Breakfast": "VEG FRIED IDLI+PLAIN IDLI+SAMBHAR+COCONUT CHATNEY+TEA+MILK+SEASONAL FRUITS",
+"Lunch": "MIX VEG WITH PANEER+RAJMA+ROTI+RICE+SALAD+BOONDI RAITA+LEMON1/2",
+"Snacks": "ALOO TIKKI/PAPDI CHAT(5 PIECE)+MATAR+CURD+SONTH+HARI CHATNI+CHAAT MASALA+ROOHAFZA",
+"Dinner": "ARHAR DAAL+BHINDI +RICE+ROTI+SUJI HALWA+{MATAR MUSHROOM (ONCE IN A MONTH)+MOONG DAAL HALWA(ONCE IN A MONTH)}+ONION SALAD"
 },
 "Tuesday": {
-"Breakfast": "🥣 Milk + Poha + Banana",
-"Lunch": "🍛 Kala Chana + Roti + Rice + Lauki + Mix Salad + Lemon 1/2",
-"Snacks": "🥔 Aloo Tikki + Hari Chutney + Tea",
-"Dinner": "🍚 Kali Massor Daal + Kathal + Rice + Roti + Ice Cream (Mango/Butterscotch/Vanilla) + Onion Salad"
+"Breakfast": "MATAR KULCHE+PICKLE+TEA+MILK+SEASONAL FRUITS",
+"Lunch": "TAHARI+ALOO TAMATAR SABJI+ROTI+SALAD+CURD+LEMON 1/2+HARI CHUTNEY",
+"Snacks": "CHOWMEIN/PASTA+TOMATO SAUCE+CHILLI+SAUCE+SHIKANJI",
+"Dinner": "KALI MASSOR DAL+KATHAL+RICE+ROTI+ICECREAM(MANGO/BUTTERSCOTCH/VANILA)+ONION SALAD"
 },
 "Wednesday": {
-"Breakfast": "🥣 Milk + Veg Upma + Apple",
-"Lunch": "🍛 Kaabli Chhole (small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
-"Snacks": "🍛 Pav Bhaji + Tea",
-"Dinner": "🍚 Green Daal + Bhindi + Rice + Roti + Rasgulla + Onion Salad"
+"Breakfast": "ALOO PARATHA+PICKLE+CURD+MILK+TEA+SEASONAL FRUITS",
+"Lunch": "KAABLI CHHOLE(SMALL)+KASHIFAL+ROTI+JEERA RICE+MIX SALAD+CURD+LEMON 1/2",
+"Snacks": "SAMOSA+CHILI SAUSE+SONATH+TEA",
+"Dinner": "(MATTAR/KADHI)+PANEER+ALOO BEGAN TOMATO CHOKHA+PURI+PULAW+ONION SALAD"
 },
 "Thursday": {
-"Breakfast": "🥣 Milk + Suji Dalia + Banana",
-"Lunch": "🍛 Green Moong Whole + Rice + Roti + Tinda + Mix Salad + Lemon 1/2",
-"Snacks": "🍞 Bread Pakoda / Rusk (5 pcs) + Sonath + Hari Chatney + Tea",
-"Dinner": "🍚 Lobiya Whole + Aloo Tamatar + Rice + Roti + Sooji Cake + Onion Salad"
+"Breakfast": "PAV BHAJI+TEA+MILK+BUTTER+SEASONAL FRUITS",
+"Lunch": "ALOO PYAJA+KADHI+RICE+ROTI+SALAD+FRIED PAPAD+LEMON1/2",
+"Snacks": "BREAD PAKODA/RUSK(5PCS)+SONATH+HARI CHATNEY+TEA",
+"Dinner": "CHANA DAL+ALOO PARVAL+ROTI+RICE+GULAB JAAMUN+MASALA CHAACH"
 },
 "Friday": {
-"Breakfast": "🥣 Milk + Aloo Sandwich + Apple",
-"Lunch": "🍛 Toor Daal + Roti + Rice + Aloo Gobhi + Mix Salad + Lemon 1/2",
-"Snacks": "🥙 Veg Cutlet + Sauce + Tea",
-"Dinner": "🍚 Methi Daal + Parwal + Rice + Roti + Fruit Custard + Onion Salad"
+"Breakfast": "ALOO PYAJ PARATHA+PICKLE+CURD+TEA+SEASONAL FRUITS",
+"Lunch": "AALOO GOBHI MATTAR+ARHAR DAAL+ROTI+RICE+MIX SALAD+BOONDI RAITA+LEMON1/2",
+"Snacks": "PATTIES+TOMATO SAUCE+TEA",
+"Dinner": "ARHAR DAL+ALOO SOYABEEN/KARELA+RICE+ROTI+BESAN LADOO+MASALA CHAACH"
 },
 "Saturday": {
-"Breakfast": "🥣 Milk + Besan Chilla + Banana",
-"Lunch": "🍛 Urad Daal + Rice + Roti + Kaddu + Mix Salad + Lemon 1/2",
-"Snacks": "🥟 Matar Kachori + Aloo Sabji + Tea",
-"Dinner": "🍚 Chana Daal + Aloo Tamatar + Rice + Roti + Ice Cream (Mango/Butterscotch/Vanilla) + Onion Salad"
+"Breakfast": "AALOO TAMATAR SABJI+AJWAIN POORI+FRY MIRCHI+TEA+JALEBI+CURD+SEASONAL FRUITS",
+"Lunch": "LOUKI DRY+ARHAR DAL+ROTI+RICE+SALAD+CURD+LEMON 1/2",
+"Snacks": "POHA+CHILI SAUCE+TOMATO SAUCE+CHAT MASALA+SHIKANJI",
+"Dinner": "RAJMA+ALOO BHUJIYA+JEERA RICE+ROTI+MASALA CHAACH"
 },
 "Sunday": {
-"Breakfast": "🥣 Milk + Aloo Puri + Raita + Pickle",
-"Lunch": "🍛 Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
-"Snacks": "🚫 OFF",
-"Dinner": "🍚 Mix Dal + Aaloo Kala Chana / Arbi + Roti + Rice + Kheer / Sewai + Onion Salad"
+"Breakfast": "ROSTED BREAD+ALOO SANDWICH+TOMATO+SAUCE+CORNFLAKES MILK+TEA+SEASONAL FRUITS",
+"Lunch": "CHOLE(KABULI CHANE BIG)+BHATURE+FRIED MIRCH+SIRKA PYAJA+JEERA RICE+COLD DRINK+PICKLE+VEG RAITA",
+"Snacks": "OFF",
+"Dinner": "MIX DAL+ALOO KALA CHANA/ARBI+ROTI+RICE+KHEER/SEWAI+ONION SALAD"
 }
 }
+
 
 
 def get_current_or_next_meal():
