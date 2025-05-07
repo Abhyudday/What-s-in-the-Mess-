@@ -4,6 +4,14 @@ from datetime import datetime, time, timedelta
 import pytz
 import os
 import sys
+import logging
+
+# Set up logging
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
@@ -208,19 +216,31 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Total users: {len(user_ids)}")
 
 if __name__ == "__main__":
-    # Check if bot is already running
-    if is_bot_running():
-        print("Bot is already running! Exiting...")
-        sys.exit(1)
+    try:
+        # Check if bot is already running
+        if is_bot_running():
+            print("Bot is already running! Exiting...")
+            sys.exit(1)
+            
+        app = Application.builder().token(BOT_TOKEN).build()
         
-    app = Application.builder().token(BOT_TOKEN).build()
-    
-    # Add job to check for notifications every minute
-    job_queue = app.job_queue
-    job_queue.run_repeating(send_meal_notification, interval=60, first=10)
-    
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CallbackQueryHandler(button_handler))
-    app.add_handler(CommandHandler("user_count", user_count))
-    print("Bot started")
-    app.run_polling()
+        # Add job to check for notifications every minute
+        try:
+            job_queue = app.job_queue
+            if job_queue is not None:
+                job_queue.run_repeating(send_meal_notification, interval=60, first=10)
+                logger.info("Job queue started successfully")
+            else:
+                logger.warning("Job queue is not available. Auto-updates will not work.")
+        except Exception as e:
+            logger.error(f"Failed to set up job queue: {e}")
+            logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
+        
+        app.add_handler(CommandHandler("start", start))
+        app.add_handler(CallbackQueryHandler(button_handler))
+        app.add_handler(CommandHandler("user_count", user_count))
+        logger.info("Bot started")
+        app.run_polling()
+    except Exception as e:
+        logger.error(f"Bot crashed: {e}")
+        sys.exit(1)
