@@ -1,10 +1,14 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 import pytz
+import os
+import sys
 
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
+# Store users who want auto-updates
+auto_update_users = set()
 
 # Mess timetable
 meal_schedule = {
@@ -58,7 +62,18 @@ menu = {
     }
 }
 
-
+# Check if bot is already running
+def is_bot_running():
+    import psutil
+    current_process = psutil.Process()
+    for process in psutil.process_iter(['pid', 'name', 'cmdline']):
+        if process.pid != current_process.pid:  # Skip current process
+            try:
+                if 'python' in process.name().lower() and 'main.py' in ' '.join(process.cmdline()):
+                    return True
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+    return False
 
 def get_current_or_next_meal():
     now = datetime.now(pytz.timezone("Asia/Kolkata")).time()
@@ -74,7 +89,8 @@ def get_current_or_next_meal():
 
 def build_main_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 What’s in Mess", callback_data="next_meal")],
+        [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
+        [InlineKeyboardButton("🔔 Toggle Auto Updates", callback_data="toggle_updates")],
     ])
 
 def build_meal_buttons():
@@ -99,10 +115,53 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=build_main_buttons()
     )
 
+async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
+    """Send notifications to users who have opted for auto-updates"""
+    tz = pytz.timezone("Asia/Kolkata")
+    now = datetime.now(tz)
+    today = now.strftime("%A")
+    next_meal = get_current_or_next_meal()
+    
+    # Get meal time and create timezone-aware datetime
+    meal_time = meal_schedule[next_meal][0]
+    notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=15)
+    
+    # Only send if we're within 1 minute of the notification time
+    if abs((now - notification_time).total_seconds()) > 60:
+        return
+    
+    message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+    
+    for user_id in auto_update_users:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=message,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            print(f"Failed to send notification to {user_id}: {e}")
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     await query.answer()
+
+    # Handle auto-update toggle
+    if data == "toggle_updates":
+        user_id = update.effective_user.id
+        if user_id in auto_update_users:
+            auto_update_users.remove(user_id)
+            status = "disabled"
+        else:
+            auto_update_users.add(user_id)
+            status = "enabled"
+        
+        await query.edit_message_text(
+            f"🔔 Auto-updates have been {status}!\nYou will receive notifications 15 minutes before each meal.",
+            reply_markup=build_main_buttons()
+        )
+        return
 
     # clear selection if we go back
     if data == "back_to_main":
@@ -149,7 +208,17 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"Total users: {len(user_ids)}")
 
 if __name__ == "__main__":
+    # Check if bot is already running
+    if is_bot_running():
+        print("Bot is already running! Exiting...")
+        sys.exit(1)
+        
     app = Application.builder().token(BOT_TOKEN).build()
+    
+    # Add job to check for notifications every minute
+    job_queue = app.job_queue
+    job_queue.run_repeating(send_meal_notification, interval=60, first=10)
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_handler))
     app.add_handler(CommandHandler("user_count", user_count))
