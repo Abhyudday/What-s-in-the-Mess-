@@ -5,6 +5,7 @@ import pytz
 import os
 import sys
 import logging
+import redis
 import json
 
 # Set up logging
@@ -16,10 +17,39 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# In-memory storage (will reset on restart, but that's okay for this use case)
-user_ids = set()
-auto_update_users = {}
+# Initialize Redis
+redis_client = redis.from_url(REDIS_URL)
+
+def load_user_data():
+    """Load user data from Redis"""
+    try:
+        # Load user IDs
+        user_ids_str = redis_client.get('user_ids')
+        user_ids = set(json.loads(user_ids_str)) if user_ids_str else set()
+        
+        # Load auto update users
+        auto_update_str = redis_client.get('auto_update_users')
+        auto_update_users = json.loads(auto_update_str) if auto_update_str else {}
+        
+        return user_ids, auto_update_users
+    except Exception as e:
+        logger.error(f"Error loading from Redis: {e}")
+        return set(), {}
+
+def save_user_data(user_ids, auto_update_users):
+    """Save user data to Redis"""
+    try:
+        # Save user IDs
+        redis_client.set('user_ids', json.dumps(list(user_ids)))
+        # Save auto update users
+        redis_client.set('auto_update_users', json.dumps(auto_update_users))
+    except Exception as e:
+        logger.error(f"Error saving to Redis: {e}")
+
+# Load initial data
+user_ids, auto_update_users = load_user_data()
 
 # States for conversation handler
 SETTING_TIME = 1
@@ -126,6 +156,7 @@ def build_day_buttons():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_ids.add(update.effective_user.id)
+    save_user_data(user_ids, auto_update_users)  # Save after adding new user
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!",
         reply_markup=build_main_buttons()
@@ -178,6 +209,7 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if user_id not in auto_update_users:
                 auto_update_users[user_id] = {}
             auto_update_users[user_id]['notification_minutes'] = minutes
+            save_user_data(user_ids, auto_update_users)  # Save after updating preferences
             await update.message.reply_text(
                 f"✅ You will now be notified {minutes} minutes before each meal!",
                 reply_markup=build_main_buttons()
@@ -204,6 +236,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id not in auto_update_users:
             auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
+            save_user_data(user_ids, auto_update_users)  # Save after enabling updates
         await query.edit_message_text(
             "🔔 Auto-updates have been enabled!\n"
             "You will receive notifications before each meal.\n"
@@ -217,6 +250,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id in auto_update_users:
             del auto_update_users[user_id]
+            save_user_data(user_ids, auto_update_users)  # Save after disabling updates
         await query.edit_message_text(
             "🔕 Auto-updates have been disabled!\n"
             "You will no longer receive meal notifications.",
