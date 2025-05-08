@@ -313,15 +313,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # if a day was chosen, use that, otherwise today
         day = context.user_data.get("selected_day") or datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
         text = f"🍽️ *{day}'s {data} Menu:*\n\n{menu[day].get(data,'No data')}"
-        # Send new message with menu and buttons
-        await context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=text,
-            parse_mode="Markdown",
-            reply_markup=build_meal_buttons()
-        )
-        # Remove buttons from the original message
-        await query.edit_message_reply_markup(reply_markup=None)
+        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
