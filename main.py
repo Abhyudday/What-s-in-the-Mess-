@@ -13,7 +13,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "7721938745:AAHPgKHl5xP3opTpfS21DSnTVlxXqC_FuQw"
+BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
 # Store users who want auto-updates and their notification times
 auto_update_users = {}  # Changed to dict to store user preferences
