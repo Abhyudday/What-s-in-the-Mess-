@@ -133,25 +133,38 @@ def get_current_or_next_meal():
 
 def build_main_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
-        [InlineKeyboardButton("🔔 Enable Auto Updates", callback_data="enable_updates"),
-         InlineKeyboardButton("🔕 Disable Auto Updates", callback_data="disable_updates")],
+        [InlineKeyboardButton("📅 Today's Menu", callback_data="next_meal")],
+        [InlineKeyboardButton("🔔 Enable Auto Updates", callback_data="enable_updates")],
+        [InlineKeyboardButton("🔕 Disable Auto Updates", callback_data="disable_updates")],
         [InlineKeyboardButton("⏰ Set Notification Time", callback_data="set_time")],
     ])
 
 def build_meal_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🥣 Breakfast", callback_data="Breakfast")],
-        [InlineKeyboardButton("🍛 Lunch",     callback_data="Lunch")],
-        [InlineKeyboardButton("🍪 Snacks",    callback_data="Snacks")],
-        [InlineKeyboardButton("🍽️ Dinner",    callback_data="Dinner")],
+        [
+            InlineKeyboardButton("🥣 Breakfast", callback_data="Breakfast"),
+            InlineKeyboardButton("🍛 Lunch", callback_data="Lunch")
+        ],
+        [
+            InlineKeyboardButton("🍪 Snacks", callback_data="Snacks"),
+            InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")
+        ],
         [InlineKeyboardButton("📅 Choose a Day", callback_data="choose_day")],
+        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")]
     ])
 
 def build_day_buttons():
-    days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]
-    kb = [[InlineKeyboardButton(d, callback_data=f"day_{d}")] for d in days]
-    kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
+    days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    kb = []
+    # Create rows of 2 buttons each
+    for i in range(0, len(days), 2):
+        row = []
+        row.append(InlineKeyboardButton(days[i], callback_data=f"day_{days[i]}"))
+        if i + 1 < len(days):
+            row.append(InlineKeyboardButton(days[i + 1], callback_data=f"day_{days[i + 1]}"))
+        kb.append(row)
+    # Add back button at the bottom
+    kb.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")])
     return InlineKeyboardMarkup(kb)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
