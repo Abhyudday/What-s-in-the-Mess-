@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, ConversationHandler, MessageHandler, filters
 from datetime import datetime, time, timedelta
 import pytz
 import os
@@ -13,10 +13,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
+BOT_TOKEN = "7721938745:AAHPgKHl5xP3opTpfS21DSnTVlxXqC_FuQw"
 user_ids = set()
-# Store users who want auto-updates
-auto_update_users = set()
+# Store users who want auto-updates and their notification times
+auto_update_users = {}  # Changed to dict to store user preferences
+
+# States for conversation handler
+SETTING_TIME = 1
 
 # Mess timetable
 meal_schedule = {
@@ -98,7 +101,9 @@ def get_current_or_next_meal():
 def build_main_buttons():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
-        [InlineKeyboardButton("🔔 Toggle Auto Updates", callback_data="toggle_updates")],
+        [InlineKeyboardButton("🔔 Enable Auto Updates", callback_data="enable_updates"),
+         InlineKeyboardButton("🔕 Disable Auto Updates", callback_data="disable_updates")],
+        [InlineKeyboardButton("⏰ Set Notification Time", callback_data="set_time")],
     ])
 
 def build_meal_buttons():
@@ -132,44 +137,93 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     
     # Get meal time and create timezone-aware datetime
     meal_time = meal_schedule[next_meal][0]
-    notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=15)
     
-    # Only send if we're within 1 minute of the notification time
-    if abs((now - notification_time).total_seconds()) > 60:
-        return
-    
-    message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
-    
-    for user_id in auto_update_users:
+    for user_id, user_prefs in auto_update_users.items():
         try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=message,
-                parse_mode="Markdown"
-            )
+            # Get user's preferred notification time (default to 15 minutes before if not set)
+            notification_minutes = user_prefs.get('notification_minutes', 15)
+            notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=notification_minutes)
+            
+            # Only send if we're within 1 minute of the notification time
+            if abs((now - notification_time).total_seconds()) <= 60:
+                message = f"🔔 *Upcoming {next_meal} in {notification_minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=message,
+                    parse_mode="Markdown"
+                )
         except Exception as e:
-            print(f"Failed to send notification to {user_id}: {e}")
+            logger.error(f"Failed to send notification to {user_id}: {e}")
+
+async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle setting custom notification time"""
+    query = update.callback_query
+    await query.answer()
+    await query.edit_message_text(
+        "⏰ Please enter how many minutes before the meal you want to be notified (1-60):\n"
+        "For example, send '15' to get notified 15 minutes before each meal.",
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Cancel", callback_data="back_to_main")]])
+    )
+    return SETTING_TIME
+
+async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle the user's time input"""
+    try:
+        minutes = int(update.message.text)
+        if 1 <= minutes <= 60:
+            user_id = update.effective_user.id
+            if user_id not in auto_update_users:
+                auto_update_users[user_id] = {}
+            auto_update_users[user_id]['notification_minutes'] = minutes
+            await update.message.reply_text(
+                f"✅ You will now be notified {minutes} minutes before each meal!",
+                reply_markup=build_main_buttons()
+            )
+        else:
+            await update.message.reply_text(
+                "❌ Please enter a number between 1 and 60.",
+                reply_markup=build_main_buttons()
+            )
+    except ValueError:
+        await update.message.reply_text(
+            "❌ Please enter a valid number.",
+            reply_markup=build_main_buttons()
+        )
+    return ConversationHandler.END
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     await query.answer()
 
-    # Handle auto-update toggle
-    if data == "toggle_updates":
+    # Handle auto-update enable
+    if data == "enable_updates":
         user_id = update.effective_user.id
-        if user_id in auto_update_users:
-            auto_update_users.remove(user_id)
-            status = "disabled"
-        else:
-            auto_update_users.add(user_id)
-            status = "enabled"
-        
+        if user_id not in auto_update_users:
+            auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
         await query.edit_message_text(
-            f"🔔 Auto-updates have been {status}!\nYou will receive notifications 15 minutes before each meal.",
+            "🔔 Auto-updates have been enabled!\n"
+            "You will receive notifications before each meal.\n"
+            "Use 'Set Notification Time' to customize when you want to be notified.",
             reply_markup=build_main_buttons()
         )
         return
+
+    # Handle auto-update disable
+    if data == "disable_updates":
+        user_id = update.effective_user.id
+        if user_id in auto_update_users:
+            del auto_update_users[user_id]
+        await query.edit_message_text(
+            "🔕 Auto-updates have been disabled!\n"
+            "You will no longer receive meal notifications.",
+            reply_markup=build_main_buttons()
+        )
+        return
+
+    # Handle set time button
+    if data == "set_time":
+        return await set_notification_time(update, context)
 
     # clear selection if we go back
     if data == "back_to_main":
@@ -224,6 +278,15 @@ if __name__ == "__main__":
             
         app = Application.builder().token(BOT_TOKEN).build()
         
+        # Add conversation handler for setting notification time
+        conv_handler = ConversationHandler(
+            entry_points=[CallbackQueryHandler(set_notification_time, pattern="^set_time$")],
+            states={
+                SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
+            },
+            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
+        )
+        
         # Add job to check for notifications every minute
         try:
             job_queue = app.job_queue
@@ -237,6 +300,7 @@ if __name__ == "__main__":
             logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
         
         app.add_handler(CommandHandler("start", start))
+        app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
         logger.info("Bot started")
