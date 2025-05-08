@@ -303,40 +303,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Broadcast a message to all users"""
-    # Check if user is authorized
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("❌ You are not authorized to broadcast messages.")
-        return
-
-    # Get the message to broadcast
-    if not context.args:
-        await update.message.reply_text("Please provide a message to broadcast.\nUsage: /broadcast <message>")
-        return
-
-    message = " ".join(context.args)
-    success_count = 0
-    fail_count = 0
-
-    for user_id in user_ids:
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"{message}",
-                parse_mode="Markdown"
-            )
-            success_count += 1
-        except Exception as e:
-            logger.error(f"Failed to send broadcast to {user_id}: {e}")
-            fail_count += 1
-
-    await update.message.reply_text(
-        f"📊 Broadcast Results:\n"
-        f"✅ Successfully sent: {success_count}\n"
-        f"❌ Failed to send: {fail_count}"
-    )
-
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show total number of users"""
     total_users = len(user_ids)
@@ -382,7 +348,6 @@ if __name__ == "__main__":
         app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
-        app.add_handler(CommandHandler("broadcast", broadcast))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
