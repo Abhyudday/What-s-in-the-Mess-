@@ -7,7 +7,6 @@ import sys
 import logging
 import redis
 import json
-import time as time_module
 
 # Set up logging
 logging.basicConfig(
@@ -16,38 +15,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', "7933870446:AAHnivWdBHVBYt3I51-IU0gGMuTE92FyVTU")
+BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# Initialize Redis with retry mechanism
-def init_redis():
-    max_retries = 5
-    retry_delay = 5  # seconds
-    
-    for attempt in range(max_retries):
-        try:
-            redis_client = redis.from_url(REDIS_URL)
-            # Test connection
-            redis_client.ping()
-            logger.info("Successfully connected to Redis")
-            return redis_client
-        except redis.ConnectionError as e:
-            if attempt < max_retries - 1:
-                logger.warning(f"Failed to connect to Redis (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay} seconds...")
-                time_module.sleep(retry_delay)
-            else:
-                logger.error(f"Failed to connect to Redis after {max_retries} attempts: {e}")
-                return None
-
-redis_client = init_redis()
+# Initialize Redis
+redis_client = redis.from_url(REDIS_URL)
 
 def load_user_data():
     """Load user data from Redis"""
-    if redis_client is None:
-        logger.warning("Redis not available, using in-memory storage")
-        return set(), {}
-        
     try:
         # Load user IDs
         user_ids_str = redis_client.get('user_ids')
@@ -64,10 +40,6 @@ def load_user_data():
 
 def save_user_data(user_ids, auto_update_users):
     """Save user data to Redis"""
-    if redis_client is None:
-        logger.warning("Redis not available, data not persisted")
-        return
-        
     try:
         # Save user IDs
         redis_client.set('user_ids', json.dumps(list(user_ids)))
@@ -208,46 +180,35 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     tz = pytz.timezone("Asia/Kolkata")
     now = datetime.now(tz)
     today = now.strftime("%A")
+    next_meal = get_current_or_next_meal()
     
-    # Check each meal time
-    for meal, (start_time, end_time) in meal_schedule.items():
-        meal_datetime = tz.localize(datetime.combine(now.date(), start_time))
-        
-        for user_id, user_prefs in auto_update_users.items():
-            try:
-                # Get user's preferred notification time
-                notification_minutes = user_prefs.get('notification_minutes', -15)  # Default to 15 minutes before
-                notification_time = meal_datetime + timedelta(minutes=notification_minutes)
-                
-                # Only send if we're within 1 minute of the notification time
-                if abs((now - notification_time).total_seconds()) <= 60:
-                    time_description = "before" if notification_minutes < 0 else "after"
-                    message = (
-                        f"🔔 *{meal} notification!*\n\n"
-                        f"🍽️ *{today}'s {meal} Menu:*\n\n"
-                        f"{menu[today].get(meal, 'No data')}\n\n"
-                        f"⏰ Meal {'starts' if notification_minutes < 0 else 'started'} at: {start_time.strftime('%I:%M %p')}\n"
-                        f"📅 You will be notified {abs(notification_minutes)} minutes {time_description} each meal."
-                    )
-                    await context.bot.send_message(
-                        chat_id=user_id,
-                        text=message,
-                        parse_mode="Markdown"
-                    )
-                    logger.info(f"Sent {meal} notification to user {user_id}")
-            except Exception as e:
-                logger.error(f"Failed to send notification to {user_id}: {e}")
+    # Get meal time and create timezone-aware datetime
+    meal_time = meal_schedule[next_meal][0]
+    
+    for user_id, user_prefs in auto_update_users.items():
+        try:
+            # Get user's preferred notification time (default to 15 minutes before if not set)
+            notification_minutes = user_prefs.get('notification_minutes', 15)
+            notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=notification_minutes)
+    
+    # Only send if we're within 1 minute of the notification time
+            if abs((now - notification_time).total_seconds()) <= 60:
+                message = f"🔔 *Upcoming {next_meal} in {notification_minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=message,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            logger.error(f"Failed to send notification to {user_id}: {e}")
 
 async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle setting custom notification time"""
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "⏰ Please enter how many minutes before or after the meal you want to be notified (1-60):\n"
-        "For example:\n"
-        "- Send '-15' to get notified 15 minutes before each meal\n"
-        "- Send '15' to get notified 15 minutes after each meal starts\n\n"
-        "Note: Notifications will be sent for all meals (Breakfast, Lunch, Snacks, Dinner).",
+        "⏰ Please enter how many minutes before the meal you want to be notified (1-60):\n"
+        "For example, send '15' to get notified 15 minutes before each meal.",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Cancel", callback_data="back_to_main")]])
     )
     return SETTING_TIME
@@ -256,27 +217,19 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the user's time input"""
     try:
         minutes = int(update.message.text)
-        if -60 <= minutes <= 60 and minutes != 0:
+        if 1 <= minutes <= 60:
             user_id = update.effective_user.id
             if user_id not in auto_update_users:
                 auto_update_users[user_id] = {}
             auto_update_users[user_id]['notification_minutes'] = minutes
-            save_user_data(user_ids, auto_update_users)
-            
-            # Show next meal time as confirmation
-            next_meal = get_current_or_next_meal()
-            meal_time = meal_schedule[next_meal][0]
-            notification_time = meal_time + timedelta(minutes=minutes)
-            
-            time_description = "before" if minutes < 0 else "after"
+            save_user_data(user_ids, auto_update_users)  # Save after updating preferences
             await update.message.reply_text(
-                f"✅ You will now be notified {abs(minutes)} minutes {time_description} each meal!\n\n"
-                f"Next notification will be for {next_meal} at {notification_time.strftime('%I:%M %p')}",
+                f"✅ You will now be notified {minutes} minutes before each meal!",
                 reply_markup=build_main_buttons()
             )
         else:
             await update.message.reply_text(
-                "❌ Please enter a number between -60 and 60 (excluding 0).",
+                "❌ Please enter a number between 1 and 60.",
                 reply_markup=build_main_buttons()
             )
     except ValueError:
@@ -295,7 +248,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "enable_updates":
         user_id = update.effective_user.id
         if user_id not in auto_update_users:
-            auto_update_users[user_id] = {'notification_minutes': -15}  # Default 15 minutes before
+            auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
             save_user_data(user_ids, auto_update_users)  # Save after enabling updates
         await query.edit_message_text(
             "🔔 Auto-updates have been enabled!\n"
@@ -389,8 +342,7 @@ if __name__ == "__main__":
             states={
                 SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
             },
-            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")],
-            per_message=False
+            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
         )
         
         # Add job to check for notifications every minute
@@ -401,7 +353,6 @@ if __name__ == "__main__":
                 logger.info("Job queue started successfully")
             else:
                 logger.warning("Job queue is not available. Auto-updates will not work.")
-                logger.warning("Please ensure you have installed python-telegram-bot[job-queue]")
         except Exception as e:
             logger.error(f"Failed to set up job queue: {e}")
             logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
