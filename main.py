@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
+BOT_TOKEN = os.getenv('BOT_TOKEN', "8081749044:AAEyaV3xrW6KFQuIcHIkugJAFzB54NRemNA")
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
@@ -327,6 +327,43 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Broadcast a message to all users"""
+    # Check if user is authorized
+    if update.effective_user.id != ADMIN_ID:
+        await update.message.reply_text("❌ You are not authorized to broadcast messages.")
+        return
+
+    # Get the message to broadcast
+    if not context.args:
+        await update.message.reply_text("Please provide a message to broadcast.\nUsage: /broadcast <message>")
+        return
+
+    message = " ".join(context.args)
+    success_count = 0
+    fail_count = 0
+
+    # Load fresh user IDs from Redis
+    current_user_ids, _ = load_user_data()
+
+    for user_id in current_user_ids:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📢 *Broadcast Message:*\n\n{message}",
+                parse_mode="Markdown"
+            )
+            success_count += 1
+        except Exception as e:
+            logger.error(f"Failed to send broadcast to {user_id}: {e}")
+            fail_count += 1
+
+    await update.message.reply_text(
+        f"📊 Broadcast Results:\n"
+        f"✅ Successfully sent: {success_count}\n"
+        f"❌ Failed to send: {fail_count}"
+    )
+
 if __name__ == "__main__":
     try:
         # Check if bot is already running
@@ -361,6 +398,7 @@ if __name__ == "__main__":
         app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
+        app.add_handler(CommandHandler("broadcast", broadcast))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
