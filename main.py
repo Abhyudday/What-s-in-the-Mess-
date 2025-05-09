@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
+BOT_TOKEN = os.getenv('BOT_TOKEN', "7721938745:AAHPgKHl5xP3opTpfS21DSnTVlxXqC_FuQw")
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
@@ -180,27 +180,33 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     tz = pytz.timezone("Asia/Kolkata")
     now = datetime.now(tz)
     today = now.strftime("%A")
-    next_meal = get_current_or_next_meal()
     
-    # Get meal time and create timezone-aware datetime
-    meal_time = meal_schedule[next_meal][0]
-    
-    for user_id, user_prefs in auto_update_users.items():
-        try:
-            # Get user's preferred notification time (default to 15 minutes before if not set)
-            notification_minutes = user_prefs.get('notification_minutes', 15)
-            notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=notification_minutes)
-            
-            # Only send if we're within 1 minute of the notification time
-            if abs((now - notification_time).total_seconds()) <= 60:
-                message = f"🔔 *Upcoming {next_meal} in {notification_minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
-                await context.bot.send_message(
-                    chat_id=user_id,
-                    text=message,
-                    parse_mode="Markdown"
-                )
-        except Exception as e:
-            logger.error(f"Failed to send notification to {user_id}: {e}")
+    # Check each meal time
+    for meal, (start_time, end_time) in meal_schedule.items():
+        meal_datetime = tz.localize(datetime.combine(now.date(), start_time))
+        
+        for user_id, user_prefs in auto_update_users.items():
+            try:
+                # Get user's preferred notification time
+                notification_minutes = user_prefs.get('notification_minutes', 15)
+                notification_time = meal_datetime - timedelta(minutes=notification_minutes)
+                
+                # Only send if we're within 1 minute of the notification time
+                if abs((now - notification_time).total_seconds()) <= 60:
+                    message = (
+                        f"🔔 *Upcoming {meal} in {notification_minutes} minutes!*\n\n"
+                        f"🍽️ *{today}'s {meal} Menu:*\n\n"
+                        f"{menu[today].get(meal, 'No data')}\n\n"
+                        f"⏰ Meal starts at: {start_time.strftime('%I:%M %p')}"
+                    )
+                    await context.bot.send_message(
+                        chat_id=user_id,
+                        text=message,
+                        parse_mode="Markdown"
+                    )
+                    logger.info(f"Sent {meal} notification to user {user_id}")
+            except Exception as e:
+                logger.error(f"Failed to send notification to {user_id}: {e}")
 
 async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle setting custom notification time"""
@@ -208,7 +214,8 @@ async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     await query.edit_message_text(
         "⏰ Please enter how many minutes before the meal you want to be notified (1-60):\n"
-        "For example, send '15' to get notified 15 minutes before each meal.",
+        "For example, send '15' to get notified 15 minutes before each meal.\n\n"
+        "Note: Notifications will be sent for all meals (Breakfast, Lunch, Snacks, Dinner).",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Cancel", callback_data="back_to_main")]])
     )
     return SETTING_TIME
@@ -222,9 +229,16 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if user_id not in auto_update_users:
                 auto_update_users[user_id] = {}
             auto_update_users[user_id]['notification_minutes'] = minutes
-            save_user_data(user_ids, auto_update_users)  # Save after updating preferences
+            save_user_data(user_ids, auto_update_users)
+            
+            # Show next meal time as confirmation
+            next_meal = get_current_or_next_meal()
+            meal_time = meal_schedule[next_meal][0]
+            notification_time = meal_time - timedelta(minutes=minutes)
+            
             await update.message.reply_text(
-                f"✅ You will now be notified {minutes} minutes before each meal!",
+                f"✅ You will now be notified {minutes} minutes before each meal!\n\n"
+                f"Next notification will be for {next_meal} at {notification_time.strftime('%I:%M %p')}",
                 reply_markup=build_main_buttons()
             )
         else:
