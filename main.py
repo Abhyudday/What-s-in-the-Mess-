@@ -16,7 +16,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', "7721938745:AAHPgKHl5xP3opTpfS21DSnTVlxXqC_FuQw")
+BOT_TOKEN = os.getenv('BOT_TOKEN', "7933870446:AAHnivWdBHVBYt3I51-IU0gGMuTE92FyVTU")
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
@@ -216,16 +216,18 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         for user_id, user_prefs in auto_update_users.items():
             try:
                 # Get user's preferred notification time
-                notification_minutes = user_prefs.get('notification_minutes', 15)
-                notification_time = meal_datetime - timedelta(minutes=notification_minutes)
+                notification_minutes = user_prefs.get('notification_minutes', -15)  # Default to 15 minutes before
+                notification_time = meal_datetime + timedelta(minutes=notification_minutes)
                 
                 # Only send if we're within 1 minute of the notification time
                 if abs((now - notification_time).total_seconds()) <= 60:
+                    time_description = "before" if notification_minutes < 0 else "after"
                     message = (
-                        f"🔔 *Upcoming {meal} in {notification_minutes} minutes!*\n\n"
+                        f"🔔 *{meal} notification!*\n\n"
                         f"🍽️ *{today}'s {meal} Menu:*\n\n"
                         f"{menu[today].get(meal, 'No data')}\n\n"
-                        f"⏰ Meal starts at: {start_time.strftime('%I:%M %p')}"
+                        f"⏰ Meal {'starts' if notification_minutes < 0 else 'started'} at: {start_time.strftime('%I:%M %p')}\n"
+                        f"📅 You will be notified {abs(notification_minutes)} minutes {time_description} each meal."
                     )
                     await context.bot.send_message(
                         chat_id=user_id,
@@ -241,8 +243,10 @@ async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TY
     query = update.callback_query
     await query.answer()
     await query.edit_message_text(
-        "⏰ Please enter how many minutes before the meal you want to be notified (1-60):\n"
-        "For example, send '15' to get notified 15 minutes before each meal.\n\n"
+        "⏰ Please enter how many minutes before or after the meal you want to be notified (1-60):\n"
+        "For example:\n"
+        "- Send '-15' to get notified 15 minutes before each meal\n"
+        "- Send '15' to get notified 15 minutes after each meal starts\n\n"
         "Note: Notifications will be sent for all meals (Breakfast, Lunch, Snacks, Dinner).",
         reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Cancel", callback_data="back_to_main")]])
     )
@@ -252,7 +256,7 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle the user's time input"""
     try:
         minutes = int(update.message.text)
-        if 1 <= minutes <= 60:
+        if -60 <= minutes <= 60 and minutes != 0:
             user_id = update.effective_user.id
             if user_id not in auto_update_users:
                 auto_update_users[user_id] = {}
@@ -262,16 +266,17 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Show next meal time as confirmation
             next_meal = get_current_or_next_meal()
             meal_time = meal_schedule[next_meal][0]
-            notification_time = meal_time - timedelta(minutes=minutes)
+            notification_time = meal_time + timedelta(minutes=minutes)
             
+            time_description = "before" if minutes < 0 else "after"
             await update.message.reply_text(
-                f"✅ You will now be notified {minutes} minutes before each meal!\n\n"
+                f"✅ You will now be notified {abs(minutes)} minutes {time_description} each meal!\n\n"
                 f"Next notification will be for {next_meal} at {notification_time.strftime('%I:%M %p')}",
                 reply_markup=build_main_buttons()
             )
         else:
             await update.message.reply_text(
-                "❌ Please enter a number between 1 and 60.",
+                "❌ Please enter a number between -60 and 60 (excluding 0).",
                 reply_markup=build_main_buttons()
             )
     except ValueError:
@@ -290,7 +295,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "enable_updates":
         user_id = update.effective_user.id
         if user_id not in auto_update_users:
-            auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
+            auto_update_users[user_id] = {'notification_minutes': -15}  # Default 15 minutes before
             save_user_data(user_ids, auto_update_users)  # Save after enabling updates
         await query.edit_message_text(
             "🔔 Auto-updates have been enabled!\n"
