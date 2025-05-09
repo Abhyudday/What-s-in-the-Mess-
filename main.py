@@ -5,8 +5,6 @@ import pytz
 import os
 import sys
 import logging
-import redis
-import json
 
 # Set up logging
 logging.basicConfig(
@@ -16,40 +14,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv('BOT_TOKEN', "8081749044:AAEyaV3xrW6KFQuIcHIkugJAFzB54NRemNA")
-ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# Initialize Redis
-redis_client = redis.from_url(REDIS_URL)
-
-def load_user_data():
-    """Load user data from Redis"""
-    try:
-        # Load user IDs
-        user_ids_str = redis_client.get('user_ids')
-        user_ids = set(json.loads(user_ids_str)) if user_ids_str else set()
-        
-        # Load auto update users
-        auto_update_str = redis_client.get('auto_update_users')
-        auto_update_users = json.loads(auto_update_str) if auto_update_str else {}
-        
-        return user_ids, auto_update_users
-    except Exception as e:
-        logger.error(f"Error loading from Redis: {e}")
-        return set(), {}
-
-def save_user_data(user_ids, auto_update_users):
-    """Save user data to Redis"""
-    try:
-        # Save user IDs
-        redis_client.set('user_ids', json.dumps(list(user_ids)))
-        # Save auto update users
-        redis_client.set('auto_update_users', json.dumps(auto_update_users))
-    except Exception as e:
-        logger.error(f"Error saving to Redis: {e}")
-
-# Load initial data
-user_ids, auto_update_users = load_user_data()
+# In-memory storage
+user_ids = set()
+auto_update_users = {}  # {user_id: {'notification_minutes': minutes}}
 
 # States for conversation handler
 SETTING_TIME = 1
@@ -169,7 +137,6 @@ def build_day_buttons():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_ids.add(update.effective_user.id)
-    save_user_data(user_ids, auto_update_users)  # Save after adding new user
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!",
         reply_markup=build_main_buttons()
@@ -190,15 +157,15 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
             # Get user's preferred notification time (default to 15 minutes before if not set)
             notification_minutes = user_prefs.get('notification_minutes', 15)
             notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=notification_minutes)
-    
-    # Only send if we're within 1 minute of the notification time
+            
+            # Only send if we're within 1 minute of the notification time
             if abs((now - notification_time).total_seconds()) <= 60:
                 message = f"🔔 *Upcoming {next_meal} in {notification_minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=message,
-                parse_mode="Markdown"
-            )
+                await context.bot.send_message(
+                    chat_id=user_id,
+                    text=message,
+                    parse_mode="Markdown"
+                )
         except Exception as e:
             logger.error(f"Failed to send notification to {user_id}: {e}")
 
@@ -222,7 +189,6 @@ async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if user_id not in auto_update_users:
                 auto_update_users[user_id] = {}
             auto_update_users[user_id]['notification_minutes'] = minutes
-            save_user_data(user_ids, auto_update_users)  # Save after updating preferences
             await update.message.reply_text(
                 f"✅ You will now be notified {minutes} minutes before each meal!",
                 reply_markup=build_main_buttons()
@@ -249,7 +215,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id not in auto_update_users:
             auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
-            save_user_data(user_ids, auto_update_users)  # Save after enabling updates
         await query.edit_message_text(
             "🔔 Auto-updates have been enabled!\n"
             "You will receive notifications before each meal.\n"
@@ -263,7 +228,6 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         if user_id in auto_update_users:
             del auto_update_users[user_id]
-            save_user_data(user_ids, auto_update_users)  # Save after disabling updates
         await query.edit_message_text(
             "🔕 Auto-updates have been disabled!\n"
             "You will no longer receive meal notifications.",
@@ -327,43 +291,6 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
-async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Broadcast a message to all users"""
-    # Check if user is authorized
-    if update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("❌ You are not authorized to broadcast messages.")
-        return
-
-    # Get the message to broadcast
-    if not context.args:
-        await update.message.reply_text("Please provide a message to broadcast.\nUsage: /broadcast <message>")
-        return
-
-    message = " ".join(context.args)
-    success_count = 0
-    fail_count = 0
-
-    # Load fresh user IDs from Redis
-    current_user_ids, _ = load_user_data()
-
-    for user_id in current_user_ids:
-        try:
-            await context.bot.send_message(
-                chat_id=user_id,
-                text=f"📢 *Broadcast Message:*\n\n{message}",
-                parse_mode="Markdown"
-            )
-            success_count += 1
-        except Exception as e:
-            logger.error(f"Failed to send broadcast to {user_id}: {e}")
-            fail_count += 1
-
-    await update.message.reply_text(
-        f"📊 Broadcast Results:\n"
-        f"✅ Successfully sent: {success_count}\n"
-        f"❌ Failed to send: {fail_count}"
-    )
-
 if __name__ == "__main__":
     try:
         # Check if bot is already running
@@ -382,23 +309,10 @@ if __name__ == "__main__":
             fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
         )
         
-        # Add job to check for notifications every minute
-        try:
-            job_queue = app.job_queue
-            if job_queue is not None:
-                job_queue.run_repeating(send_meal_notification, interval=60, first=10)
-                logger.info("Job queue started successfully")
-            else:
-                logger.warning("Job queue is not available. Auto-updates will not work.")
-        except Exception as e:
-            logger.error(f"Failed to set up job queue: {e}")
-            logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
-        
         app.add_handler(CommandHandler("start", start))
         app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
-        app.add_handler(CommandHandler("broadcast", broadcast))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
