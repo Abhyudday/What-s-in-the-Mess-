@@ -7,6 +7,7 @@ import sys
 import logging
 import redis
 import json
+import time as time_module
 
 # Set up logging
 logging.basicConfig(
@@ -19,11 +20,34 @@ BOT_TOKEN = os.getenv('BOT_TOKEN', "7721938745:AAHPgKHl5xP3opTpfS21DSnTVlxXqC_Fu
 ADMIN_ID = int(os.getenv('ADMIN_ID', "5950741458"))  # Your admin ID as default value
 REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379')
 
-# Initialize Redis
-redis_client = redis.from_url(REDIS_URL)
+# Initialize Redis with retry mechanism
+def init_redis():
+    max_retries = 5
+    retry_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            redis_client = redis.from_url(REDIS_URL)
+            # Test connection
+            redis_client.ping()
+            logger.info("Successfully connected to Redis")
+            return redis_client
+        except redis.ConnectionError as e:
+            if attempt < max_retries - 1:
+                logger.warning(f"Failed to connect to Redis (attempt {attempt + 1}/{max_retries}). Retrying in {retry_delay} seconds...")
+                time_module.sleep(retry_delay)
+            else:
+                logger.error(f"Failed to connect to Redis after {max_retries} attempts: {e}")
+                return None
+
+redis_client = init_redis()
 
 def load_user_data():
     """Load user data from Redis"""
+    if redis_client is None:
+        logger.warning("Redis not available, using in-memory storage")
+        return set(), {}
+        
     try:
         # Load user IDs
         user_ids_str = redis_client.get('user_ids')
@@ -40,6 +64,10 @@ def load_user_data():
 
 def save_user_data(user_ids, auto_update_users):
     """Save user data to Redis"""
+    if redis_client is None:
+        logger.warning("Redis not available, data not persisted")
+        return
+        
     try:
         # Save user IDs
         redis_client.set('user_ids', json.dumps(list(user_ids)))
@@ -356,7 +384,8 @@ if __name__ == "__main__":
             states={
                 SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
             },
-            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
+            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")],
+            per_message=False
         )
         
         # Add job to check for notifications every minute
@@ -367,6 +396,7 @@ if __name__ == "__main__":
                 logger.info("Job queue started successfully")
             else:
                 logger.warning("Job queue is not available. Auto-updates will not work.")
+                logger.warning("Please ensure you have installed python-telegram-bot[job-queue]")
         except Exception as e:
             logger.error(f"Failed to set up job queue: {e}")
             logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
