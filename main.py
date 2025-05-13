@@ -309,6 +309,9 @@ if __name__ == "__main__":
             fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
         )
         
+        # Add job to check and send notifications every minute
+        app.job_queue.run_repeating(send_meal_notification, interval=60, first=10)
+        
         app.add_handler(CommandHandler("start", start))
         app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
