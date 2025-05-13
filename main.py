@@ -5,6 +5,7 @@ import pytz
 import os
 import sys
 import logging
+from db import init_db, save_user, get_all_users, update_notification_settings, get_user_settings
 
 # Set up logging
 logging.basicConfig(
@@ -14,9 +15,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
-user_ids = set()
-# Store users who want auto-updates and their notification preferences
-auto_update_users = {}  # Changed to dict to store user preferences
 # Track last notification sent to prevent duplicates
 last_notification = {}
 
@@ -138,8 +136,19 @@ def build_time_buttons():
     kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
     return InlineKeyboardMarkup(kb)
 
+async def save_user_info(update: Update):
+    """Save user information to database"""
+    user = update.effective_user
+    if user:
+        save_user(
+            user_id=user.id,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name
+        )
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_ids.add(update.effective_user.id)
+    await save_user_info(update)
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!",
         reply_markup=build_main_buttons()
@@ -155,8 +164,15 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     # Get meal time and create timezone-aware datetime
     meal_time = meal_schedule[next_meal][0]
     
-    for user_id, minutes in auto_update_users.items():
-        notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=int(minutes))
+    # Get all users with auto-updates enabled
+    all_users = get_all_users()
+    
+    for user_id in all_users:
+        settings = get_user_settings(user_id)
+        if not settings or not settings[1]:  # settings[1] is auto_updates
+            continue
+            
+        notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=int(settings[0]))
         
         # Create a unique key for this notification
         notification_key = f"{user_id}_{today}_{next_meal}"
@@ -165,7 +181,7 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         if (abs((now - notification_time).total_seconds()) <= 60 and 
             notification_key not in last_notification):
             
-            message = f"🔔 *Upcoming {next_meal} in {minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            message = f"🔔 *Upcoming {next_meal} in {settings[0]} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
             
             try:
                 await context.bot.send_message(
@@ -178,27 +194,28 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"Failed to send notification to {user_id}: {e}")
     
-    # Clean up old notification records (older than 1 day)
-    current_time = datetime.now(tz)
-    last_notification.clear()  # Simple cleanup for now
+    # Clean up old notification records
+    last_notification.clear()
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     await query.answer()
+    
+    # Save user info on any interaction
+    await save_user_info(update)
 
     # Handle auto-update toggle
     if data == "toggle_updates":
         user_id = update.effective_user.id
-        if user_id in auto_update_users:
-            del auto_update_users[user_id]
-            status = "disabled"
-        else:
-            auto_update_users[user_id] = "15"  # Default to 15 minutes
-            status = "enabled"
+        settings = get_user_settings(user_id)
+        current_status = settings[1] if settings else False
+        
+        update_notification_settings(user_id, auto_updates=not current_status)
+        status = "enabled" if not current_status else "disabled"
         
         await query.edit_message_text(
-            f"🔔 Auto-updates have been {status}!\nYou will receive notifications 15 minutes before each meal.",
+            f"🔔 Auto-updates have been {status}!\nYou will receive notifications {settings[0] if settings else 15} minutes before each meal.",
             reply_markup=build_main_buttons()
         )
         return
@@ -215,12 +232,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("time_"):
         minutes = data.split("_")[1]
         user_id = update.effective_user.id
-        if user_id in auto_update_users:
-            auto_update_users[user_id] = minutes
-            await query.edit_message_text(
-                f"✅ Notification time set to {minutes} minutes before each meal!",
-                reply_markup=build_main_buttons()
-            )
+        update_notification_settings(user_id, notification_time=int(minutes))
+        await query.edit_message_text(
+            f"✅ Notification time set to {minutes} minutes before each meal!",
+            reply_markup=build_main_buttons()
+        )
         return
 
     # clear selection if we go back
@@ -264,11 +280,38 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
-async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(f"Total users: {len(user_ids)}")
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Send a broadcast message to all users"""
+    if not context.args:
+        await update.message.reply_text("Please provide a message to broadcast.")
+        return
+        
+    message = " ".join(context.args)
+    users = get_all_users()
+    success = 0
+    failed = 0
+    
+    for user_id in users:
+        try:
+            await context.bot.send_message(
+                chat_id=user_id,
+                text=f"📢 *Broadcast Message:*\n\n{message}",
+                parse_mode="Markdown"
+            )
+            success += 1
+        except Exception as e:
+            logger.error(f"Failed to send broadcast to {user_id}: {e}")
+            failed += 1
+    
+    await update.message.reply_text(
+        f"Broadcast completed!\n✅ Successfully sent: {success}\n❌ Failed: {failed}"
+    )
 
 if __name__ == "__main__":
     try:
+        # Initialize database
+        init_db()
+        
         # Check if bot is already running
         if is_bot_running():
             print("Bot is already running! Exiting...")
@@ -290,7 +333,7 @@ if __name__ == "__main__":
         
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CallbackQueryHandler(button_handler))
-        app.add_handler(CommandHandler("user_count", user_count))
+        app.add_handler(CommandHandler("broadcast", broadcast))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
