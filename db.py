@@ -1,10 +1,5 @@
 import psycopg2
 from psycopg2 import pool
-import os
-from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
 
 # Database configuration
 DB_NAME = 'railway'
