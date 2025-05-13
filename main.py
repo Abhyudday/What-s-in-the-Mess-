@@ -1,12 +1,10 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, ConversationHandler, MessageHandler, filters
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
 from datetime import datetime, time, timedelta
 import pytz
 import os
 import sys
 import logging
-import socket
-import time as time_module
 
 # Set up logging
 logging.basicConfig(
@@ -15,14 +13,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = os.getenv('BOT_TOKEN', "8081749044:AAEyaV3xrW6KFQuIcHIkugJAFzB54NRemNA")
-
-# In-memory storage
+BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 user_ids = set()
-auto_update_users = {}  # {user_id: {'notification_minutes': minutes}}
-
-# States for conversation handler
-SETTING_TIME = 1
+# Store users who want auto-updates and their notification preferences
+auto_update_users = {}  # Changed to dict to store user preferences
+# Track last notification sent to prevent duplicates
+last_notification = {}
 
 # Mess timetable
 meal_schedule = {
@@ -83,15 +79,8 @@ def is_bot_running():
     for process in psutil.process_iter(['pid', 'name', 'cmdline']):
         if process.pid != current_process.pid:  # Skip current process
             try:
-                cmdline = ' '.join(process.cmdline())
-                if 'python' in process.name().lower() and 'main.py' in cmdline:
-                    # Try to terminate the process gracefully
-                    process.terminate()
-                    try:
-                        process.wait(timeout=5)  # Wait up to 5 seconds for process to terminate
-                    except psutil.TimeoutExpired:
-                        process.kill()  # Force kill if it doesn't terminate
-                    return False
+                if 'python' in process.name().lower() and 'main.py' in ' '.join(process.cmdline()):
+                    return True
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     return False
@@ -110,10 +99,9 @@ def get_current_or_next_meal():
 
 def build_main_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 Today's Menu", callback_data="next_meal")],
-        [InlineKeyboardButton("🔔 Enable Auto Updates", callback_data="enable_updates")],
-        [InlineKeyboardButton("🔕 Disable Auto Updates", callback_data="disable_updates")],
-        [InlineKeyboardButton("⏰ Set Notification Time", callback_data="set_time")],
+        [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
+        [InlineKeyboardButton("🔔 Toggle Auto Updates", callback_data="toggle_updates")],
+        [InlineKeyboardButton("⏰ Set Notification Time", callback_data="set_notification_time")]
     ])
 
 def build_meal_buttons():
@@ -127,21 +115,27 @@ def build_meal_buttons():
             InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")
         ],
         [InlineKeyboardButton("📅 Choose a Day", callback_data="choose_day")],
-        [InlineKeyboardButton("🔙 Back to Main Menu", callback_data="back_to_main")]
+        [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
     ])
 
 def build_day_buttons():
     days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
     kb = []
-    # Create rows of 2 buttons each
     for i in range(0, len(days), 2):
-        row = []
-        row.append(InlineKeyboardButton(days[i], callback_data=f"day_{days[i]}"))
+        row = [InlineKeyboardButton(days[i], callback_data=f"day_{days[i]}")]
         if i + 1 < len(days):
             row.append(InlineKeyboardButton(days[i + 1], callback_data=f"day_{days[i + 1]}"))
         kb.append(row)
-    # Add back button at the bottom
-    kb.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")])
+    kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
+    return InlineKeyboardMarkup(kb)
+
+def build_time_buttons():
+    times = ["5", "10", "15", "20", "30", "45", "60"]
+    kb = []
+    for i in range(0, len(times), 3):
+        row = [InlineKeyboardButton(f"{t} min", callback_data=f"time_{t}") for t in times[i:i+3]]
+        kb.append(row)
+    kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
     return InlineKeyboardMarkup(kb)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -161,92 +155,73 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     # Get meal time and create timezone-aware datetime
     meal_time = meal_schedule[next_meal][0]
     
-    for user_id, user_prefs in auto_update_users.items():
-        try:
-            # Get user's preferred notification time (default to 15 minutes before if not set)
-            notification_minutes = user_prefs.get('notification_minutes', 15)
-            notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=notification_minutes)
+    for user_id, minutes in auto_update_users.items():
+        notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=int(minutes))
+        
+        # Create a unique key for this notification
+        notification_key = f"{user_id}_{today}_{next_meal}"
+        
+        # Only send if we're within 1 minute of the notification time and haven't sent this notification before
+        if (abs((now - notification_time).total_seconds()) <= 60 and 
+            notification_key not in last_notification):
             
-            # Only send if we're within 1 minute of the notification time
-            if abs((now - notification_time).total_seconds()) <= 60:
-                message = f"🔔 *Upcoming {next_meal} in {notification_minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            message = f"🔔 *Upcoming {next_meal} in {minutes} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            
+            try:
                 await context.bot.send_message(
                     chat_id=user_id,
                     text=message,
                     parse_mode="Markdown"
                 )
-        except Exception as e:
-            logger.error(f"Failed to send notification to {user_id}: {e}")
-
-async def set_notification_time(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle setting custom notification time"""
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(
-        "⏰ Please enter how many minutes before the meal you want to be notified (1-60):\n"
-        "For example, send '15' to get notified 15 minutes before each meal.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Cancel", callback_data="back_to_main")]])
-    )
-    return SETTING_TIME
-
-async def handle_time_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle the user's time input"""
-    try:
-        minutes = int(update.message.text)
-        if 1 <= minutes <= 60:
-            user_id = update.effective_user.id
-            if user_id not in auto_update_users:
-                auto_update_users[user_id] = {}
-            auto_update_users[user_id]['notification_minutes'] = minutes
-            await update.message.reply_text(
-                f"✅ You will now be notified {minutes} minutes before each meal!",
-                reply_markup=build_main_buttons()
-            )
-        else:
-            await update.message.reply_text(
-                "❌ Please enter a number between 1 and 60.",
-                reply_markup=build_main_buttons()
-            )
-    except ValueError:
-        await update.message.reply_text(
-            "❌ Please enter a valid number.",
-            reply_markup=build_main_buttons()
-        )
-    return ConversationHandler.END
+                # Mark this notification as sent
+                last_notification[notification_key] = now
+            except Exception as e:
+                logger.error(f"Failed to send notification to {user_id}: {e}")
+    
+    # Clean up old notification records (older than 1 day)
+    current_time = datetime.now(tz)
+    last_notification.clear()  # Simple cleanup for now
 
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
     await query.answer()
 
-    # Handle auto-update enable
-    if data == "enable_updates":
-        user_id = update.effective_user.id
-        if user_id not in auto_update_users:
-            auto_update_users[user_id] = {'notification_minutes': 15}  # Default 15 minutes
-        await query.edit_message_text(
-            "🔔 Auto-updates have been enabled!\n"
-            "You will receive notifications before each meal.\n"
-            "Use 'Set Notification Time' to customize when you want to be notified.",
-            reply_markup=build_main_buttons()
-        )
-        return
-
-    # Handle auto-update disable
-    if data == "disable_updates":
+    # Handle auto-update toggle
+    if data == "toggle_updates":
         user_id = update.effective_user.id
         if user_id in auto_update_users:
             del auto_update_users[user_id]
+            status = "disabled"
+        else:
+            auto_update_users[user_id] = "15"  # Default to 15 minutes
+            status = "enabled"
+        
         await query.edit_message_text(
-            "🔕 Auto-updates have been disabled!\n"
-            "You will no longer receive meal notifications.",
+            f"🔔 Auto-updates have been {status}!\nYou will receive notifications 15 minutes before each meal.",
             reply_markup=build_main_buttons()
         )
         return
 
-    # Handle set time button
-    if data == "set_time":
-        return await set_notification_time(update, context)
+    # Handle notification time setting
+    if data == "set_notification_time":
+        await query.edit_message_text(
+            "⏰ Choose how many minutes before each meal you want to be notified:",
+            reply_markup=build_time_buttons()
+        )
+        return
+
+    # Handle time selection
+    if data.startswith("time_"):
+        minutes = data.split("_")[1]
+        user_id = update.effective_user.id
+        if user_id in auto_update_users:
+            auto_update_users[user_id] = minutes
+            await query.edit_message_text(
+                f"✅ Notification time set to {minutes} minutes before each meal!",
+                reply_markup=build_main_buttons()
+            )
+        return
 
     # clear selection if we go back
     if data == "back_to_main":
@@ -290,72 +265,34 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Show total number of users"""
-    total_users = len(user_ids)
-    active_updates = len(auto_update_users)
-    await update.message.reply_text(
-        f"📊 *User Statistics:*\n"
-        f"👥 Total Users: {total_users}\n"
-        f"🔔 Users with Auto Updates: {active_updates}",
-        parse_mode="Markdown"
-    )
-
-def is_port_in_use(port):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        return s.connect_ex(('localhost', port)) == 0
-
-def wait_for_port(port, timeout=30):
-    start_time = time_module.time()
-    while time_module.time() - start_time < timeout:
-        if not is_port_in_use(port):
-            return True
-        time_module.sleep(1)
-    return False
+    await update.message.reply_text(f"Total users: {len(user_ids)}")
 
 if __name__ == "__main__":
     try:
-        # Try to bind to a specific port to ensure only one instance runs
-        port = 8443  # Telegram webhook port
-        if is_port_in_use(port):
-            logger.warning("Another instance might be running. Waiting for port to be available...")
-            if not wait_for_port(port):
-                logger.error("Could not start bot: Port is still in use after timeout")
-                sys.exit(1)
-        
+        # Check if bot is already running
+        if is_bot_running():
+            print("Bot is already running! Exiting...")
+            sys.exit(1)
+            
         app = Application.builder().token(BOT_TOKEN).build()
         
-        # Add conversation handler for setting notification time
-        conv_handler = ConversationHandler(
-            entry_points=[CallbackQueryHandler(set_notification_time, pattern="^set_time$")],
-            states={
-                SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
-            },
-            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")],
-            per_message=False,
-            per_chat=True,
-            per_user=True
-        )
-        
-        # Add job to check and send notifications every minute
-        app.job_queue.run_repeating(send_meal_notification, interval=60, first=10)
-        
-        # Add error handler
-        async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-            logger.error("Exception while handling an update:", exc_info=context.error)
-            if isinstance(context.error, telegram.error.Conflict):
-                logger.error("Bot conflict detected. Attempting to restart...")
-                await app.stop()
-                await app.start()
-        
-        app.add_error_handler(error_handler)
+        # Add job to check for notifications every minute
+        try:
+            job_queue = app.job_queue
+            if job_queue is not None:
+                job_queue.run_repeating(send_meal_notification, interval=60, first=10)
+                logger.info("Job queue started successfully")
+            else:
+                logger.warning("Job queue is not available. Auto-updates will not work.")
+        except Exception as e:
+            logger.error(f"Failed to set up job queue: {e}")
+            logger.warning("Auto-updates will not work. Please install python-telegram-bot[job-queue]")
         
         app.add_handler(CommandHandler("start", start))
-        app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
-        
         logger.info("Bot started")
-        app.run_polling(allowed_updates=Update.ALL_TYPES)
+        app.run_polling()
     except Exception as e:
         logger.error(f"Bot crashed: {e}")
         sys.exit(1)
