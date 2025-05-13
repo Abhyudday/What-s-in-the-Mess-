@@ -81,8 +81,15 @@ def is_bot_running():
     for process in psutil.process_iter(['pid', 'name', 'cmdline']):
         if process.pid != current_process.pid:  # Skip current process
             try:
-                if 'python' in process.name().lower() and 'main.py' in ' '.join(process.cmdline()):
-                    return True
+                cmdline = ' '.join(process.cmdline())
+                if 'python' in process.name().lower() and 'main.py' in cmdline:
+                    # Try to terminate the process gracefully
+                    process.terminate()
+                    try:
+                        process.wait(timeout=5)  # Wait up to 5 seconds for process to terminate
+                    except psutil.TimeoutExpired:
+                        process.kill()  # Force kill if it doesn't terminate
+                    return False
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
     return False
@@ -293,10 +300,9 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     try:
-        # Check if bot is already running
+        # Check if bot is already running and terminate if it is
         if is_bot_running():
-            print("Bot is already running! Exiting...")
-            sys.exit(1)
+            print("Found existing bot instance. Terminating it...")
             
         app = Application.builder().token(BOT_TOKEN).build()
         
@@ -306,7 +312,8 @@ if __name__ == "__main__":
             states={
                 SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
             },
-            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")]
+            fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")],
+            per_message=False  # Add this to fix the warning
         )
         
         # Add job to check and send notifications every minute
