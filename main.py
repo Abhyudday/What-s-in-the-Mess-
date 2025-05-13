@@ -5,6 +5,8 @@ import pytz
 import os
 import sys
 import logging
+import socket
+import time as time_module
 
 # Set up logging
 logging.basicConfig(
@@ -298,12 +300,28 @@ async def user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode="Markdown"
     )
 
+def is_port_in_use(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        return s.connect_ex(('localhost', port)) == 0
+
+def wait_for_port(port, timeout=30):
+    start_time = time_module.time()
+    while time_module.time() - start_time < timeout:
+        if not is_port_in_use(port):
+            return True
+        time_module.sleep(1)
+    return False
+
 if __name__ == "__main__":
     try:
-        # Check if bot is already running and terminate if it is
-        if is_bot_running():
-            print("Found existing bot instance. Terminating it...")
-            
+        # Try to bind to a specific port to ensure only one instance runs
+        port = 8443  # Telegram webhook port
+        if is_port_in_use(port):
+            logger.warning("Another instance might be running. Waiting for port to be available...")
+            if not wait_for_port(port):
+                logger.error("Could not start bot: Port is still in use after timeout")
+                sys.exit(1)
+        
         app = Application.builder().token(BOT_TOKEN).build()
         
         # Add conversation handler for setting notification time
@@ -313,18 +331,31 @@ if __name__ == "__main__":
                 SETTING_TIME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_time_input)],
             },
             fallbacks=[CallbackQueryHandler(button_handler, pattern="^back_to_main$")],
-            per_message=False  # Add this to fix the warning
+            per_message=False,
+            per_chat=True,
+            per_user=True
         )
         
         # Add job to check and send notifications every minute
         app.job_queue.run_repeating(send_meal_notification, interval=60, first=10)
         
+        # Add error handler
+        async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+            logger.error("Exception while handling an update:", exc_info=context.error)
+            if isinstance(context.error, telegram.error.Conflict):
+                logger.error("Bot conflict detected. Attempting to restart...")
+                await app.stop()
+                await app.start()
+        
+        app.add_error_handler(error_handler)
+        
         app.add_handler(CommandHandler("start", start))
         app.add_handler(conv_handler)
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("user_count", user_count))
+        
         logger.info("Bot started")
-        app.run_polling()
+        app.run_polling(allowed_updates=Update.ALL_TYPES)
     except Exception as e:
         logger.error(f"Bot crashed: {e}")
         sys.exit(1)
