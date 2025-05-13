@@ -7,10 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database configuration
-DB_NAME = 'mess_bot'
+DB_NAME = 'railway'
 DB_USER = 'postgres'
-DB_PASSWORD = 'postgres'  # Change this to your actual password
-DB_HOST = 'localhost'
+DB_PASSWORD = 'lYHvrGIWEvlneKyJuPohebsjqbaXikuV'
+DB_HOST = 'postgres.railway.internal'
 DB_PORT = '5432'
 
 # Create a connection pool
