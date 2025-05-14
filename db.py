@@ -103,6 +103,11 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
         conn = connection_pool.getconn()
         print(f"Got database connection for user {user_id}")  # Debug log
         
+        # Convert hostel preference to lowercase if provided
+        if hostel_preference:
+            hostel_preference = hostel_preference.lower()
+            print(f"Normalized hostel preference to: {hostel_preference}")  # Debug log
+        
         with conn.cursor() as cur:
             # First check if user exists
             print(f"Checking if user {user_id} exists")  # Debug log
@@ -176,7 +181,9 @@ def get_user_settings(user_id):
             print(f"Retrieved settings for user {user_id}: {result}")  # Debug log
             
             if result:
-                return (15, result[0], result[1])
+                # Ensure hostel preference is lowercase
+                hostel_preference = result[1].lower() if result[1] else 'boys'
+                return (15, result[0], hostel_preference)
             else:
                 print(f"User {user_id} not found, creating with default settings")  # Debug log
                 # Create new user with default settings if not found

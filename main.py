@@ -300,7 +300,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle hostel selection
     if data.startswith("hostel_"):
         print(f"Hostel selection: {data}")  # Debug log
-        hostel = data.split("_")[1]
+        hostel = data.split("_")[1].lower()  # Convert to lowercase
         print(f"Selected hostel: {hostel}")  # Debug log
         try:
             success = update_notification_settings(user_id, hostel_preference=hostel)
