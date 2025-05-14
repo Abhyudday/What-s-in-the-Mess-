@@ -32,6 +32,7 @@ def init_db():
                     first_name VARCHAR(255),
                     last_name VARCHAR(255),
                     auto_updates BOOLEAN DEFAULT FALSE,
+                    hostel_preference VARCHAR(10) DEFAULT 'boys',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -78,17 +79,28 @@ def get_all_users():
     finally:
         connection_pool.putconn(conn)
 
-def update_notification_settings(user_id, auto_updates=None):
+def update_notification_settings(user_id, auto_updates=None, hostel_preference=None):
     """Update user's notification settings"""
     conn = connection_pool.getconn()
     try:
         with conn.cursor() as cur:
+            updates = []
+            params = []
             if auto_updates is not None:
-                cur.execute("""
+                updates.append("auto_updates = %s")
+                params.append(auto_updates)
+            if hostel_preference is not None:
+                updates.append("hostel_preference = %s")
+                params.append(hostel_preference)
+            
+            if updates:
+                query = f"""
                     UPDATE users 
-                    SET auto_updates = %s
+                    SET {', '.join(updates)}
                     WHERE user_id = %s
-                """, (auto_updates, user_id))
+                """
+                params.append(user_id)
+                cur.execute(query, params)
                 conn.commit()
     except Exception as e:
         print(f"Error updating notification settings: {e}")
@@ -102,12 +114,12 @@ def get_user_settings(user_id):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT auto_updates 
+                SELECT auto_updates, hostel_preference 
                 FROM users 
                 WHERE user_id = %s
             """, (user_id,))
             result = cur.fetchone()
-            return (15, result[0]) if result else None
+            return (15, result[0], result[1]) if result else None
     except Exception as e:
         print(f"Error getting user settings: {e}")
         return None

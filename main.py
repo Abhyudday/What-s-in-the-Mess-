@@ -25,7 +25,9 @@ meal_schedule = {
     "Snacks": (time(17, 0), time(18, 0)),
     "Dinner": (time(19, 30), time(21, 0))
 }
-menu = {
+
+# Boys Hostel Menu
+boys_menu = {
     "Monday": {
         "Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
         "Lunch": "🍛 Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2",
@@ -70,6 +72,58 @@ menu = {
     }
 }
 
+# Girls Hostel Menu
+girls_menu = {
+    "Monday": {
+        "Breakfast": "🍽️ Matar with Cucumber & Onion + Kulcha + Tea + Milk + Fruit",
+        "Lunch": "🍛 Arhar Daal + Mix Veg with Paneer + Boondi Raita + Rice + Chapati + Salad with Onion + 1/2 Lemon",
+        "Snacks": "🍞 Bread Pakoda/Milk Rusk + Tomato Sauce + Green Chutney + Tea + Green Elaichi",
+        "Dinner": "🍚 Butter Masala/Matar Paneer + Aloo Chana + Chapati + Rice + Besan Laddu + Jeera Masala Chaach"
+    },
+    "Tuesday": {
+        "Breakfast": "🍽️ Fried Idli-Sambhar-Nariyal Chutney + Tea + Milk + Fruit",
+        "Lunch": "🍛 Beans-Chapati-Rice-Curd (Beetroot) + Salad with Onion + 1/2 Lemon",
+        "Snacks": "🍝 Chowmein + Sauce (Tomato & Green Chilli) + Tang",
+        "Dinner": "🍚 Tamatar-Aaloo-Paneer + Rice + Pulav + Chapati"
+    },
+    "Wednesday": {
+        "Breakfast": "🍽️ Bread + Amul Butter + Jam + Cornflakes + Tea + Milk + Fruit",
+        "Lunch": "🍛 Kadhi without Tomato & Onion + Aloo Methi + Rice + Chapati + Mix Salad + Lachha + 1/2 Lemon",
+        "Snacks": "🍜 Poha/Namkeen Jave + Sauce (Tomato & Green Chilli) + Roohafza",
+        "Dinner": "🍚 Mix Veg + Matar Mushroom + Chapati + Rice + Ice Cream + Salad"
+    },
+    "Thursday": {
+        "Breakfast": "🍽️ Plain Parantha + Aloo Jeera Dry + Tea + Milk + Fruit",
+        "Lunch": "🍛 Aloo with Tomato + Baingan + Rice + Salad with Onion + 1/2 Lemon",
+        "Snacks": "🍝 Macroni + Sauce (Tomato + Green Chilli) + Roohafza",
+        "Dinner": "🍚 Chhole + Aloo with Tomato + Chapati + Rice + Salad + Ice Cream"
+    },
+    "Friday": {
+        "Breakfast": "🍽️ Pav Bhaji with Butter + Tea + Milk + Fruit",
+        "Lunch": "🍛 Rawa + Aloo Jeera with Rassbhari (Pasaa) + Rice + Chapati + Salad + 1/2 Lemon",
+        "Snacks": "🍛 Black Chana Chat + Chhathi + Tea",
+        "Dinner": "🍚 Louki Kofta + Masoor Dal + Kathal/Matar Mushroom + Rice + Chapati + Ice Cream + Salad"
+    },
+    "Saturday": {
+        "Breakfast": "🍽️ Aloo Parantha + Pickle + Curd + Tea + Milk + Pickle + Fruit",
+        "Lunch": "🍛 Black Chana + Lauki Kofta + Chapati + Rice + Kacha Salad with Onion + 1/2 Lemon",
+        "Snacks": "🥟 Samosa -1 Pc (Big Size) + Chhathi + Tea",
+        "Dinner": "🍚 Lauki Chana Dal + Arbi + Chapati + Rice + Fruit + Rajma Masala Chaach"
+    },
+    "Sunday": {
+        "Breakfast": "🍽️ Aloo Tomato Sabji (Bhandare wali) + Poodi + Tea + Milk + Fruit",
+        "Lunch": "🍛 Chhole Masala + Aloo + Boondi Raita + Salad + Chapati + Onion + 1/2 Lemon",
+        "Snacks": "🚫 OFF",
+        "Dinner": "🍚 Lauki Chana Dal + Arbi + Chapati + Rice + Fruit + Rajma Masala Chaach"
+    }
+}
+
+# Menu mapping
+menu = {
+    "boys": boys_menu,
+    "girls": girls_menu
+}
+
 # Check if bot is already running
 def is_bot_running():
     import psutil
@@ -99,15 +153,25 @@ def build_main_buttons():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🍽️ Today's Menu", callback_data="next_meal")],
         [InlineKeyboardButton("📅 View Other Days", callback_data="choose_day")],
-        [InlineKeyboardButton("🔔 Notifications", callback_data="notification_settings")]
+        [InlineKeyboardButton("🔔 Notifications", callback_data="notification_settings")],
+        [InlineKeyboardButton("🏠 Change Hostel", callback_data="change_hostel")]
+    ])
+
+def build_hostel_buttons(current_hostel):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{'✅' if current_hostel == 'boys' else '⬜'} Boys Hostel", callback_data="hostel_boys")],
+        [InlineKeyboardButton(f"{'✅' if current_hostel == 'girls' else '⬜'} Girls Hostel", callback_data="hostel_girls")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
     ])
 
 def build_notification_buttons(user_id):
     settings = get_user_settings(user_id)
     is_enabled = settings[1] if settings else False
+    hostel = settings[2] if settings else 'boys'
     status_emoji = "✅" if is_enabled else "❌"
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{status_emoji} 15-min Notifications: {'ON' if is_enabled else 'OFF'}", callback_data="toggle_updates")],
+        [InlineKeyboardButton(f"🏠 Current Hostel: {'Boys' if hostel == 'boys' else 'Girls'}", callback_data="change_hostel")],
         [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
     ])
 
@@ -160,7 +224,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!\n\n"
         "🍽️ Check today's menu or view other days\n"
-        "🔔 Get notified 15 minutes before each meal\n\n"
+        "🔔 Get notified 15 minutes before each meal\n"
+        "🏠 Choose between Boys and Girls hostel menu\n\n"
         "What would you like to do?",
         reply_markup=build_main_buttons()
     )
@@ -191,7 +256,8 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         if (abs((now - notification_time).total_seconds()) <= 60 and 
             notification_key not in last_notification):
             
-            message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            hostel = settings[2] if settings else 'boys'
+            message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu ({hostel.title()} Hostel):*\n\n{menu[hostel][today].get(next_meal,'No data')}"
             
             try:
                 await context.bot.send_message(
@@ -214,6 +280,28 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Save user info on any interaction
     await save_user_info(update)
+    user_id = update.effective_user.id
+    settings = get_user_settings(user_id)
+    current_hostel = settings[2] if settings else 'boys'
+
+    # Handle hostel change
+    if data == "change_hostel":
+        await query.edit_message_text(
+            "🏠 *Select your hostel:*",
+            parse_mode="Markdown",
+            reply_markup=build_hostel_buttons(current_hostel)
+        )
+        return
+
+    # Handle hostel selection
+    if data.startswith("hostel_"):
+        hostel = data.split("_")[1]
+        update_notification_settings(user_id, hostel_preference=hostel)
+        await query.edit_message_text(
+            f"✅ Hostel changed to {hostel.title()} Hostel!",
+            reply_markup=build_main_buttons()
+        )
+        return
 
     # Handle notification settings
     if data == "notification_settings":
@@ -222,13 +310,12 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "Get notified 15 minutes before each meal time.\n"
             "Toggle the button below to enable/disable notifications.",
             parse_mode="Markdown",
-            reply_markup=build_notification_buttons(update.effective_user.id)
+            reply_markup=build_notification_buttons(user_id)
         )
         return
 
     # Handle auto-update toggle
     if data == "toggle_updates":
-        user_id = update.effective_user.id
         settings = get_user_settings(user_id)
         current_status = settings[1] if settings else False
         
@@ -258,7 +345,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.pop("selected_day", None)
         meal = get_current_or_next_meal()
         today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
-        text = f"🍽️ *{today}'s {meal} Menu:*\n\n{menu[today].get(meal,'No data')}"
+        text = f"🍽️ *{today}'s {meal} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][today].get(meal,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
@@ -277,7 +364,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["selected_day"] = day
         # show that day's current/next meal
         meal = get_current_or_next_meal()
-        text = f"🍽️ *{day}'s {meal} Menu:*\n\n{menu[day].get(meal,'No data')}"
+        text = f"🍽️ *{day}'s {meal} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][day].get(meal,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
@@ -285,7 +372,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data in meal_schedule:
         # if a day was chosen, use that, otherwise today
         day = context.user_data.get("selected_day") or datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
-        text = f"🍽️ *{day}'s {data} Menu:*\n\n{menu[day].get(data,'No data')}"
+        text = f"🍽️ *{day}'s {data} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][day].get(data,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
