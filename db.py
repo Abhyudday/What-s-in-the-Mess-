@@ -31,7 +31,6 @@ def init_db():
                     username VARCHAR(255),
                     first_name VARCHAR(255),
                     last_name VARCHAR(255),
-                    notification_time INTEGER DEFAULT 15,
                     auto_updates BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -79,28 +78,17 @@ def get_all_users():
     finally:
         connection_pool.putconn(conn)
 
-def update_notification_settings(user_id, notification_time=None, auto_updates=None):
+def update_notification_settings(user_id, auto_updates=None):
     """Update user's notification settings"""
     conn = connection_pool.getconn()
     try:
         with conn.cursor() as cur:
-            updates = []
-            params = []
-            if notification_time is not None:
-                updates.append("notification_time = %s")
-                params.append(notification_time)
             if auto_updates is not None:
-                updates.append("auto_updates = %s")
-                params.append(auto_updates)
-            
-            if updates:
-                query = f"""
+                cur.execute("""
                     UPDATE users 
-                    SET {', '.join(updates)}
+                    SET auto_updates = %s
                     WHERE user_id = %s
-                """
-                params.append(user_id)
-                cur.execute(query, params)
+                """, (auto_updates, user_id))
                 conn.commit()
     except Exception as e:
         print(f"Error updating notification settings: {e}")
@@ -114,11 +102,12 @@ def get_user_settings(user_id):
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT notification_time, auto_updates 
+                SELECT auto_updates 
                 FROM users 
                 WHERE user_id = %s
             """, (user_id,))
-            return cur.fetchone()
+            result = cur.fetchone()
+            return (15, result[0]) if result else None
     except Exception as e:
         print(f"Error getting user settings: {e}")
         return None

@@ -98,8 +98,7 @@ def get_current_or_next_meal():
 def build_main_buttons():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
-        [InlineKeyboardButton("🔔 Toggle Auto Updates", callback_data="toggle_updates")],
-        [InlineKeyboardButton("⏰ Set Notification Time", callback_data="set_notification_time")]
+        [InlineKeyboardButton("🔔 Toggle 15-min Notifications", callback_data="toggle_updates")]
     ])
 
 def build_meal_buttons():
@@ -163,6 +162,7 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     
     # Get meal time and create timezone-aware datetime
     meal_time = meal_schedule[next_meal][0]
+    notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=15)
     
     # Get all users with auto-updates enabled
     all_users = get_all_users()
@@ -172,8 +172,6 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         if not settings or not settings[1]:  # settings[1] is auto_updates
             continue
             
-        notification_time = tz.localize(datetime.combine(now.date(), meal_time)) - timedelta(minutes=int(settings[0]))
-        
         # Create a unique key for this notification
         notification_key = f"{user_id}_{today}_{next_meal}"
         
@@ -181,7 +179,7 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         if (abs((now - notification_time).total_seconds()) <= 60 and 
             notification_key not in last_notification):
             
-            message = f"🔔 *Upcoming {next_meal} in {settings[0]} minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
+            message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
             
             try:
                 await context.bot.send_message(
@@ -215,36 +213,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status = "enabled" if not current_status else "disabled"
         
         await query.edit_message_text(
-            f"🔔 Auto-updates have been {status}!\nYou will receive notifications {settings[0] if settings else 15} minutes before each meal.",
-            reply_markup=build_main_buttons()
-        )
-        return
-
-    # Handle notification time setting
-    if data == "set_notification_time":
-        await query.edit_message_text(
-            "⏰ Choose how many minutes before each meal you want to be notified:\n\nOr send a custom number of minutes (1-1440).",
-            reply_markup=build_time_buttons()
-        )
-        return
-
-    # Handle time selection
-    if data.startswith("time_"):
-        minutes = data.split("_")[1]
-        if minutes == "Custom":
-            await query.edit_message_text(
-                "Please send the number of minutes (1-1440) you want to be notified before each meal:",
-                reply_markup=InlineKeyboardMarkup([[
-                    InlineKeyboardButton("🔙 Back", callback_data="set_notification_time")
-                ]])
-            )
-            context.user_data['waiting_for_custom_time'] = True
-            return
-            
-        user_id = update.effective_user.id
-        update_notification_settings(user_id, notification_time=int(minutes))
-        await query.edit_message_text(
-            f"✅ Notification time set to {minutes} minutes before each meal!",
+            f"🔔 15-minute notifications have been {status}!\nYou will receive notifications 15 minutes before each meal.",
             reply_markup=build_main_buttons()
         )
         return
