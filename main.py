@@ -315,6 +315,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.pop('waiting_for_custom_time', None)
         return
 
+async def get_user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Hidden command to get total number of users"""
+    users = get_all_users()
+    await update.message.reply_text(f"👥 Total users: {len(users)}")
+
 if __name__ == "__main__":
     try:
         # Initialize database
@@ -342,7 +347,7 @@ if __name__ == "__main__":
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("broadcast", broadcast))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        app.add_handler(CommandHandler("kitne", get_user_count))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
