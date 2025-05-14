@@ -303,13 +303,20 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         hostel = data.split("_")[1]
         print(f"Selected hostel: {hostel}")  # Debug log
         try:
-            update_notification_settings(user_id, hostel_preference=hostel)
-            print(f"Successfully updated hostel preference to {hostel}")  # Debug log
-            await query.edit_message_text(
-                f"✅ Hostel changed to {hostel.title()} Hostel!\n\n"
-                "What would you like to do?",
-                reply_markup=build_main_buttons()
-            )
+            success = update_notification_settings(user_id, hostel_preference=hostel)
+            if success:
+                print(f"Successfully updated hostel preference to {hostel}")  # Debug log
+                await query.edit_message_text(
+                    f"✅ Hostel changed to {hostel.title()} Hostel!\n\n"
+                    "What would you like to do?",
+                    reply_markup=build_main_buttons()
+                )
+            else:
+                print(f"Failed to update hostel preference to {hostel}")  # Debug log
+                await query.edit_message_text(
+                    "❌ Sorry, there was an error updating your hostel preference. Please try again.",
+                    reply_markup=build_main_buttons()
+                )
         except Exception as e:
             print(f"Error updating hostel preference: {e}")  # Debug log
             await query.edit_message_text(

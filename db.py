@@ -84,26 +84,27 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
     conn = connection_pool.getconn()
     try:
         with conn.cursor() as cur:
-            updates = []
-            params = []
-            if auto_updates is not None:
-                updates.append("auto_updates = %s")
-                params.append(auto_updates)
-            if hostel_preference is not None:
-                updates.append("hostel_preference = %s")
-                params.append(hostel_preference)
-            
-            if updates:
-                # First check if user exists
-                cur.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-                if not cur.fetchone():
-                    print(f"User {user_id} not found, creating new user")  # Debug log
-                    # Create user if doesn't exist
-                    cur.execute("""
-                        INSERT INTO users (user_id, hostel_preference)
-                        VALUES (%s, %s)
-                    """, (user_id, hostel_preference or 'boys'))
-                else:
+            # First check if user exists
+            cur.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
+            if not cur.fetchone():
+                print(f"User {user_id} not found, creating new user")  # Debug log
+                # Create user if doesn't exist
+                cur.execute("""
+                    INSERT INTO users (user_id, hostel_preference, auto_updates)
+                    VALUES (%s, %s, %s)
+                """, (user_id, hostel_preference or 'boys', auto_updates or False))
+            else:
+                # Build update query based on provided parameters
+                updates = []
+                params = []
+                if auto_updates is not None:
+                    updates.append("auto_updates = %s")
+                    params.append(auto_updates)
+                if hostel_preference is not None:
+                    updates.append("hostel_preference = %s")
+                    params.append(hostel_preference)
+                
+                if updates:
                     query = f"""
                         UPDATE users 
                         SET {', '.join(updates)}
@@ -112,18 +113,19 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
                     params.append(user_id)
                     print(f"Executing query: {query} with params: {params}")  # Debug log
                     cur.execute(query, params)
-                
-                conn.commit()
-                print(f"Successfully updated settings for user {user_id}")  # Debug log
-                
-                # Verify the update
-                cur.execute("SELECT hostel_preference FROM users WHERE user_id = %s", (user_id,))
-                result = cur.fetchone()
-                print(f"Verified hostel preference after update: {result[0] if result else 'None'}")  # Debug log
+            
+            conn.commit()
+            print(f"Successfully updated settings for user {user_id}")  # Debug log
+            
+            # Verify the update
+            cur.execute("SELECT hostel_preference, auto_updates FROM users WHERE user_id = %s", (user_id,))
+            result = cur.fetchone()
+            print(f"Verified settings after update - hostel: {result[0]}, auto_updates: {result[1]}")  # Debug log
+            return True
     except Exception as e:
         print(f"Error updating notification settings: {e}")
         conn.rollback()  # Rollback on error
-        raise
+        return False
     finally:
         connection_pool.putconn(conn)
 
@@ -138,7 +140,16 @@ def get_user_settings(user_id):
                 WHERE user_id = %s
             """, (user_id,))
             result = cur.fetchone()
-            return (15, result[0], result[1]) if result else None
+            if result:
+                return (15, result[0], result[1])
+            else:
+                # Create new user with default settings if not found
+                cur.execute("""
+                    INSERT INTO users (user_id, auto_updates, hostel_preference)
+                    VALUES (%s, %s, %s)
+                """, (user_id, False, 'boys'))
+                conn.commit()
+                return (15, False, 'boys')
     except Exception as e:
         print(f"Error getting user settings: {e}")
         return None
