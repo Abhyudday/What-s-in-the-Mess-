@@ -94,18 +94,35 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
                 params.append(hostel_preference)
             
             if updates:
-                query = f"""
-                    UPDATE users 
-                    SET {', '.join(updates)}
-                    WHERE user_id = %s
-                """
-                params.append(user_id)
-                print(f"Executing query: {query} with params: {params}")  # Debug log
-                cur.execute(query, params)
+                # First check if user exists
+                cur.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
+                if not cur.fetchone():
+                    print(f"User {user_id} not found, creating new user")  # Debug log
+                    # Create user if doesn't exist
+                    cur.execute("""
+                        INSERT INTO users (user_id, hostel_preference)
+                        VALUES (%s, %s)
+                    """, (user_id, hostel_preference or 'boys'))
+                else:
+                    query = f"""
+                        UPDATE users 
+                        SET {', '.join(updates)}
+                        WHERE user_id = %s
+                    """
+                    params.append(user_id)
+                    print(f"Executing query: {query} with params: {params}")  # Debug log
+                    cur.execute(query, params)
+                
                 conn.commit()
                 print(f"Successfully updated settings for user {user_id}")  # Debug log
+                
+                # Verify the update
+                cur.execute("SELECT hostel_preference FROM users WHERE user_id = %s", (user_id,))
+                result = cur.fetchone()
+                print(f"Verified hostel preference after update: {result[0] if result else 'None'}")  # Debug log
     except Exception as e:
         print(f"Error updating notification settings: {e}")
+        conn.rollback()  # Rollback on error
         raise
     finally:
         connection_pool.putconn(conn)
