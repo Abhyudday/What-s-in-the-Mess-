@@ -213,7 +213,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status = "enabled" if not current_status else "disabled"
         
         await query.edit_message_text(
-            f"🔔 15-minute notifications have been {status}!\nYou will receive notifications 15 minutes before each meal.",
+            f"🔔 15-minute notifications have been {status}!\n",
             reply_markup=build_main_buttons()
         )
         return
@@ -274,7 +274,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"📢 *Broadcast Message:*\n\n{message}",
+                text=f"{message}",
                 parse_mode="Markdown"
             )
             success += 1
