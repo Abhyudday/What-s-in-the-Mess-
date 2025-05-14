@@ -8,21 +8,29 @@ DB_PASSWORD = 'lYHvrGIWEvlneKyJuPohebsjqbaXikuV'
 DB_HOST = 'postgres.railway.internal'
 DB_PORT = '5432'
 
-# Create a connection pool
-connection_pool = pool.SimpleConnectionPool(
-    1,  # minconn
-    10,  # maxconn
-    dbname=DB_NAME,
-    user=DB_USER,
-    password=DB_PASSWORD,
-    host=DB_HOST,
-    port=DB_PORT
-)
+# Initialize connection pool
+try:
+    connection_pool = psycopg2.pool.SimpleConnectionPool(
+        minconn=1,
+        maxconn=10,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT
+    )
+    print("Database connection pool initialized successfully")  # Debug log
+except Exception as e:
+    print(f"Error creating connection pool: {str(e)}")  # Debug log
+    print(f"Error type: {type(e)}")  # Debug log
+    raise
 
 def init_db():
-    """Initialize the database and create necessary tables"""
-    conn = connection_pool.getconn()
+    """Initialize database and create tables if they don't exist"""
     try:
+        conn = connection_pool.getconn()
+        print("Got database connection for initialization")  # Debug log
+        
         with conn.cursor() as cur:
             # Create users table if it doesn't exist
             cur.execute("""
@@ -31,18 +39,27 @@ def init_db():
                     username VARCHAR(255),
                     first_name VARCHAR(255),
                     last_name VARCHAR(255),
-                    auto_updates BOOLEAN DEFAULT FALSE,
                     hostel_preference VARCHAR(10) DEFAULT 'boys',
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    last_interaction TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    auto_updates BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
             conn.commit()
+            print("Database tables initialized successfully")  # Debug log
+            
+            # Test the connection
+            cur.execute("SELECT 1")
+            test_result = cur.fetchone()
+            print(f"Database connection test result: {test_result}")  # Debug log
+            
     except Exception as e:
-        print(f"Error initializing database: {e}")
+        print(f"Error initializing database: {str(e)}")  # Debug log
+        print(f"Error type: {type(e)}")  # Debug log
         raise
     finally:
-        connection_pool.putconn(conn)
+        if conn:
+            connection_pool.putconn(conn)
+            print("Database connection returned to pool")  # Debug log
 
 def save_user(user_id, username=None, first_name=None, last_name=None):
     """Save or update user information"""
@@ -81,18 +98,26 @@ def get_all_users():
 
 def update_notification_settings(user_id, auto_updates=None, hostel_preference=None):
     """Update user's notification settings"""
-    conn = connection_pool.getconn()
+    conn = None
     try:
+        conn = connection_pool.getconn()
+        print(f"Got database connection for user {user_id}")  # Debug log
+        
         with conn.cursor() as cur:
             # First check if user exists
+            print(f"Checking if user {user_id} exists")  # Debug log
             cur.execute("SELECT user_id FROM users WHERE user_id = %s", (user_id,))
-            if not cur.fetchone():
-                print(f"User {user_id} not found, creating new user")  # Debug log
+            user_exists = cur.fetchone()
+            print(f"User exists: {user_exists is not None}")  # Debug log
+
+            if not user_exists:
+                print(f"Creating new user {user_id}")  # Debug log
                 # Create user if doesn't exist
                 cur.execute("""
                     INSERT INTO users (user_id, hostel_preference, auto_updates)
                     VALUES (%s, %s, %s)
                 """, (user_id, hostel_preference or 'boys', auto_updates or False))
+                print(f"Created new user with hostel: {hostel_preference or 'boys'}")  # Debug log
             else:
                 # Build update query based on provided parameters
                 updates = []
@@ -111,11 +136,12 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
                         WHERE user_id = %s
                     """
                     params.append(user_id)
-                    print(f"Executing query: {query} with params: {params}")  # Debug log
+                    print(f"Executing update query: {query} with params: {params}")  # Debug log
                     cur.execute(query, params)
+                    print(f"Update query executed successfully")  # Debug log
             
             conn.commit()
-            print(f"Successfully updated settings for user {user_id}")  # Debug log
+            print(f"Changes committed for user {user_id}")  # Debug log
             
             # Verify the update
             cur.execute("SELECT hostel_preference, auto_updates FROM users WHERE user_id = %s", (user_id,))
@@ -123,16 +149,23 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
             print(f"Verified settings after update - hostel: {result[0]}, auto_updates: {result[1]}")  # Debug log
             return True
     except Exception as e:
-        print(f"Error updating notification settings: {e}")
-        conn.rollback()  # Rollback on error
+        print(f"Error updating notification settings: {str(e)}")  # Debug log
+        print(f"Error type: {type(e)}")  # Debug log
+        if conn:
+            conn.rollback()
         return False
     finally:
-        connection_pool.putconn(conn)
+        if conn:
+            connection_pool.putconn(conn)
+            print("Database connection returned to pool")  # Debug log
 
 def get_user_settings(user_id):
     """Get user's notification settings"""
-    conn = connection_pool.getconn()
+    conn = None
     try:
+        conn = connection_pool.getconn()
+        print(f"Got database connection for getting settings of user {user_id}")  # Debug log
+        
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT auto_updates, hostel_preference 
@@ -140,18 +173,25 @@ def get_user_settings(user_id):
                 WHERE user_id = %s
             """, (user_id,))
             result = cur.fetchone()
+            print(f"Retrieved settings for user {user_id}: {result}")  # Debug log
+            
             if result:
                 return (15, result[0], result[1])
             else:
+                print(f"User {user_id} not found, creating with default settings")  # Debug log
                 # Create new user with default settings if not found
                 cur.execute("""
                     INSERT INTO users (user_id, auto_updates, hostel_preference)
                     VALUES (%s, %s, %s)
                 """, (user_id, False, 'boys'))
                 conn.commit()
+                print(f"Created new user {user_id} with default settings")  # Debug log
                 return (15, False, 'boys')
     except Exception as e:
-        print(f"Error getting user settings: {e}")
+        print(f"Error getting user settings: {str(e)}")  # Debug log
+        print(f"Error type: {type(e)}")  # Debug log
         return None
     finally:
-        connection_pool.putconn(conn) 
+        if conn:
+            connection_pool.putconn(conn)
+            print("Database connection returned to pool")  # Debug log 
