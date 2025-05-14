@@ -100,8 +100,10 @@ def update_notification_settings(user_id, auto_updates=None, hostel_preference=N
                     WHERE user_id = %s
                 """
                 params.append(user_id)
+                print(f"Executing query: {query} with params: {params}")  # Debug log
                 cur.execute(query, params)
                 conn.commit()
+                print(f"Successfully updated settings for user {user_id}")  # Debug log
     except Exception as e:
         print(f"Error updating notification settings: {e}")
         raise

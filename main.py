@@ -298,7 +298,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         hostel = data.split("_")[1]
         update_notification_settings(user_id, hostel_preference=hostel)
         await query.edit_message_text(
-            f"✅ Hostel changed to {hostel.title()} Hostel!",
+            f"✅ Hostel changed to {hostel.title()} Hostel!\n\n"
+            "What would you like to do?",
             reply_markup=build_main_buttons()
         )
         return
