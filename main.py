@@ -1,5 +1,5 @@
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, MessageHandler, filters
 from datetime import datetime, time, timedelta
 import pytz
 import os
@@ -128,7 +128,7 @@ def build_day_buttons():
     return InlineKeyboardMarkup(kb)
 
 def build_time_buttons():
-    times = ["5", "10", "15", "20", "30", "45", "60"]
+    times = ["5", "10", "15", "20", "30", "45", "60", "Custom"]
     kb = []
     for i in range(0, len(times), 3):
         row = [InlineKeyboardButton(f"{t} min", callback_data=f"time_{t}") for t in times[i:i+3]]
@@ -223,7 +223,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle notification time setting
     if data == "set_notification_time":
         await query.edit_message_text(
-            "⏰ Choose how many minutes before each meal you want to be notified:",
+            "⏰ Choose how many minutes before each meal you want to be notified:\n\nOr send a custom number of minutes (1-1440).",
             reply_markup=build_time_buttons()
         )
         return
@@ -231,6 +231,16 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Handle time selection
     if data.startswith("time_"):
         minutes = data.split("_")[1]
+        if minutes == "Custom":
+            await query.edit_message_text(
+                "Please send the number of minutes (1-1440) you want to be notified before each meal:",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back", callback_data="set_notification_time")
+                ]])
+            )
+            context.user_data['waiting_for_custom_time'] = True
+            return
+            
         user_id = update.effective_user.id
         update_notification_settings(user_id, notification_time=int(minutes))
         await query.edit_message_text(
@@ -307,6 +317,35 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Broadcast completed!\n✅ Successfully sent: {success}\n❌ Failed: {failed}"
     )
 
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle custom time input"""
+    if context.user_data.get('waiting_for_custom_time'):
+        try:
+            minutes = int(update.message.text)
+            if 1 <= minutes <= 1440:  # Allow up to 24 hours
+                user_id = update.effective_user.id
+                update_notification_settings(user_id, notification_time=minutes)
+                await update.message.reply_text(
+                    f"✅ Notification time set to {minutes} minutes before each meal!",
+                    reply_markup=build_main_buttons()
+                )
+            else:
+                await update.message.reply_text(
+                    "Please enter a number between 1 and 1440 minutes.",
+                    reply_markup=InlineKeyboardMarkup([[
+                        InlineKeyboardButton("🔙 Back", callback_data="set_notification_time")
+                    ]])
+                )
+        except ValueError:
+            await update.message.reply_text(
+                "Please enter a valid number.",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 Back", callback_data="set_notification_time")
+                ]])
+            )
+        context.user_data.pop('waiting_for_custom_time', None)
+        return
+
 if __name__ == "__main__":
     try:
         # Initialize database
@@ -334,6 +373,7 @@ if __name__ == "__main__":
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("broadcast", broadcast))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         logger.info("Bot started")
         app.run_polling()
     except Exception as e:
