@@ -6,6 +6,7 @@ import os
 import sys
 import logging
 from db import init_db, save_user, get_all_users, update_notification_settings, get_user_settings
+import psutil
 
 # Set up logging
 logging.basicConfig(
@@ -53,7 +54,7 @@ boys_menu = {
         "Dinner": "🍚 Chana Daal + Aloo Parval + Roti + Rice + Gulab Jamun + Masala Chaach"
     },
     "Friday": {
-        "Breakfast": "🍽️ Aloo Pyaj Paratha + Pickle + Curd + Tea + Seasonal Fruits",
+        "Breakfast": "🍽️ Aloo Paratha + Pickle + Curd + Tea + Milk + Seasonal Fruits",
         "Lunch": "🍛 Aloo Gobhi Mattar + Arhar Daal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2",
         "Snacks": "🥙 Patties + Tomato Sauce + Tea",
         "Dinner": "🍚 Arhar Daal + Aloo Soyabeen / Karela + Rice + Roti + Besan Ladoo + Masala Chaach"
@@ -118,15 +119,8 @@ girls_menu = {
     }
 }
 
-# Menu mapping
-menu = {
-    "boys": boys_menu,
-    "girls": girls_menu
-}
-
 # Check if bot is already running
 def is_bot_running():
-    import psutil
     current_process = psutil.Process()
     for process in psutil.process_iter(['pid', 'name', 'cmdline']):
         if process.pid != current_process.pid:  # Skip current process
@@ -149,29 +143,24 @@ def get_current_or_next_meal():
             return meal
     return "Breakfast"
 
+# Store the current menu selection in user_data
+def get_menu_for_user(user_id):
+    return context.user_data.get('selected_hostel', 'boys')
+
 def build_main_buttons():
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🏠 Select Hostel", callback_data="select_hostel")],
         [InlineKeyboardButton("🍽️ Today's Menu", callback_data="next_meal")],
         [InlineKeyboardButton("📅 View Other Days", callback_data="choose_day")],
-        [InlineKeyboardButton("🔔 Notifications", callback_data="notification_settings")],
-        [InlineKeyboardButton("🏠 Change Hostel", callback_data="change_hostel")]
-    ])
-
-def build_hostel_buttons(current_hostel):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"{'✅' if current_hostel == 'boys' else '⬜'} Boys Hostel", callback_data="hostel_boys")],
-        [InlineKeyboardButton(f"{'✅' if current_hostel == 'girls' else '⬜'} Girls Hostel", callback_data="hostel_girls")],
-        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
+        [InlineKeyboardButton("🔔 Notifications", callback_data="notification_settings")]
     ])
 
 def build_notification_buttons(user_id):
     settings = get_user_settings(user_id)
     is_enabled = settings[1] if settings else False
-    hostel = settings[2] if settings else 'boys'
     status_emoji = "✅" if is_enabled else "❌"
     return InlineKeyboardMarkup([
         [InlineKeyboardButton(f"{status_emoji} 15-min Notifications: {'ON' if is_enabled else 'OFF'}", callback_data="toggle_updates")],
-        [InlineKeyboardButton(f"🏠 Current Hostel: {'Boys' if hostel == 'boys' else 'Girls'}", callback_data="change_hostel")],
         [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
     ])
 
@@ -208,6 +197,15 @@ def build_time_buttons():
     kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
     return InlineKeyboardMarkup(kb)
 
+def build_hostel_buttons():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("👨 Boys Hostel", callback_data="hostel_boys"),
+            InlineKeyboardButton("👩 Girls Hostel", callback_data="hostel_girls")
+        ],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
+    ])
+
 async def save_user_info(update: Update):
     """Save user information to database"""
     user = update.effective_user
@@ -224,8 +222,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Welcome to the Mess Bot!\n\n"
         "🍽️ Check today's menu or view other days\n"
-        "🔔 Get notified 15 minutes before each meal\n"
-        "🏠 Choose between Boys and Girls hostel menu\n\n"
+        "🔔 Get notified 15 minutes before each meal\n\n"
         "What would you like to do?",
         reply_markup=build_main_buttons()
     )
@@ -256,8 +253,7 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
         if (abs((now - notification_time).total_seconds()) <= 60 and 
             notification_key not in last_notification):
             
-            hostel = settings[2] if settings else 'boys'
-            message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu ({hostel.title()} Hostel):*\n\n{menu[hostel][today].get(next_meal,'No data')}"
+            message = f"🔔 *Upcoming {next_meal} in 15 minutes!*\n\n🍽️ *{today}'s {next_meal} Menu:*\n\n{menu[today].get(next_meal,'No data')}"
             
             try:
                 await context.bot.send_message(
@@ -276,57 +272,31 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
-    await query.answer()
-    
-    # Save user info on any interaction
-    await save_user_info(update)
     user_id = update.effective_user.id
-    settings = get_user_settings(user_id)
-    current_hostel = settings[2] if settings else 'boys'
-    
-    print(f"Button clicked: {data}")  # Debug log
-    print(f"Current hostel: {current_hostel}")  # Debug log
 
-    # Handle hostel change
-    if data == "change_hostel":
-        print("Change hostel button clicked")  # Debug log
+    # Handle hostel selection
+    if data == "select_hostel":
         await query.edit_message_text(
             "🏠 *Select your hostel:*",
             parse_mode="Markdown",
-            reply_markup=build_hostel_buttons(current_hostel)
+            reply_markup=build_hostel_buttons()
         )
         return
 
-    # Handle hostel selection
     if data.startswith("hostel_"):
-        print(f"Hostel selection: {data}")  # Debug log
-        hostel = data.split("_")[1].lower()  # Convert to lowercase
-        print(f"Selected hostel: {hostel}")  # Debug log
-        try:
-            success = update_notification_settings(user_id, hostel_preference=hostel)
-            if success:
-                print(f"Successfully updated hostel preference to {hostel}")  # Debug log
-                await query.edit_message_text(
-                    f"✅ Hostel changed to {hostel.title()} Hostel!\n\n"
-                    "What would you like to do?",
-                    reply_markup=build_main_buttons()
-                )
-            else:
-                print(f"Failed to update hostel preference to {hostel}")  # Debug log
-                await query.edit_message_text(
-                    "❌ Sorry, there was an error updating your hostel preference. Please try again.",
-                    reply_markup=build_main_buttons()
-                )
-        except Exception as e:
-            print(f"Error updating hostel preference: {e}")  # Debug log
-            await query.edit_message_text(
-                "❌ Sorry, there was an error updating your hostel preference. Please try again.",
-                reply_markup=build_main_buttons()
-            )
+        hostel = data.split("_")[1]
+        context.user_data['selected_hostel'] = hostel
+        await query.edit_message_text(
+            f"✅ Selected {hostel.title()} Hostel!\n\nWhat would you like to do?",
+            reply_markup=build_main_buttons()
+        )
         return
 
     # Handle notification settings
     if data == "notification_settings":
+        settings = get_user_settings(user_id)
+        is_enabled = settings[1] if settings else False
+        status_emoji = "✅" if is_enabled else "❌"
         await query.edit_message_text(
             "🔔 *Notification Settings*\n\n"
             "Get notified 15 minutes before each meal time.\n"
@@ -367,7 +337,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.pop("selected_day", None)
         meal = get_current_or_next_meal()
         today = datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
-        text = f"🍽️ *{today}'s {meal} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][today].get(meal,'No data')}"
+        hostel = context.user_data.get('selected_hostel', 'boys')
+        menu = boys_menu if hostel == 'boys' else girls_menu
+        text = f"🍽️ *{today}'s {meal} Menu ({hostel.title()} Hostel):*\n\n{menu[today].get(meal,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
@@ -386,7 +358,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["selected_day"] = day
         # show that day's current/next meal
         meal = get_current_or_next_meal()
-        text = f"🍽️ *{day}'s {meal} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][day].get(meal,'No data')}"
+        hostel = context.user_data.get('selected_hostel', 'boys')
+        menu = boys_menu if hostel == 'boys' else girls_menu
+        text = f"🍽️ *{day}'s {meal} Menu ({hostel.title()} Hostel):*\n\n{menu[day].get(meal,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
@@ -394,7 +368,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data in meal_schedule:
         # if a day was chosen, use that, otherwise today
         day = context.user_data.get("selected_day") or datetime.now(pytz.timezone("Asia/Kolkata")).strftime("%A")
-        text = f"🍽️ *{day}'s {data} Menu ({current_hostel.title()} Hostel):*\n\n{menu[current_hostel][day].get(data,'No data')}"
+        hostel = context.user_data.get('selected_hostel', 'boys')
+        menu = boys_menu if hostel == 'boys' else girls_menu
+        text = f"🍽️ *{day}'s {data} Menu ({hostel.title()} Hostel):*\n\n{menu[day].get(data,'No data')}"
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=build_meal_buttons())
         return
 
