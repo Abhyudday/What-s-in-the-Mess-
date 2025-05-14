@@ -76,46 +76,46 @@ boys_menu = {
 # Girls Hostel Menu
 girls_menu = {
     "Monday": {
-        "Breakfast": "🍽️ Matar with Cucumber & Onion + Kulcha + Tea + Milk + Fruit",
-        "Lunch": "🍛 Arhar Daal + Mix Veg with Paneer + Boondi Raita + Rice + Chapati + Salad with Onion + 1/2 Lemon",
-        "Snacks": "🍞 Bread Pakoda/Milk Rusk + Tomato Sauce + Green Chutney + Tea + Green Elaichi",
-        "Dinner": "🍚 Butter Masala/Matar Paneer + Aloo Chana + Chapati + Rice + Besan Laddu + Jeera Masala Chaach"
+        "Breakfast": "Matar with cucumber & onion + Kulcha + Tea ☕ + Milk + Fruit 🍎",
+        "Lunch": "Arhar Daal + Mix veg with paneer + Boondi raita + Rice 🍚 + Chapati + Salad 🥗 + 1/2 Lemon 🍋",
+        "Snacks": "Bread pakoda/Mix pakodi + Tomato sauce + Green chutni + Tea ☕ (Green elaichi)",
+        "Dinner": "Butter masala/Matar paneer + Aloo chokha + Chapati + Rice + Sweet 🍬"
     },
     "Tuesday": {
-        "Breakfast": "🍽️ Fried Idli-Sambhar-Nariyal Chutney + Tea + Milk + Fruit",
-        "Lunch": "🍛 Beans-Chapati-Rice-Curd (Beetroot) + Salad with Onion + 1/2 Lemon",
-        "Snacks": "🍝 Chowmein + Sauce (Tomato & Green Chilli) + Tang",
-        "Dinner": "🍚 Tamatar-Aaloo-Paneer + Rice + Pulav + Chapati"
+        "Breakfast": "Fried idli + Sambhar + Nariyal chutni + Tea ☕ + Milk + Fruit 🍌",
+        "Lunch": "Rajma/French beans + Aloo tamatar + Rice 🍚 + Curd + Salad 🥗 + 1/2 Lemon 🍋",
+        "Snacks": "Chowmein + Tomato & green chilli sauce + Tang 🥤",
+        "Dinner": "Tamatar-Aloo-Paneer + Chapati + Rice 🍚 + Gulab jamun 🍩 + Chaach"
     },
     "Wednesday": {
-        "Breakfast": "🍽️ Bread + Amul Butter + Jam + Cornflakes + Tea + Milk + Fruit",
-        "Lunch": "🍛 Kadhi without Tomato & Onion + Aloo Methi + Rice + Chapati + Mix Salad + Lachha + 1/2 Lemon",
-        "Snacks": "🍜 Poha/Namkeen Jave + Sauce (Tomato & Green Chilli) + Roohafza",
-        "Dinner": "🍚 Mix Veg + Matar Mushroom + Chapati + Rice + Ice Cream + Salad"
+        "Breakfast": "Bread + Amul butter + Jam + Cornflakes + Tea ☕ + Milk + Fruit 🍇",
+        "Lunch": "Kadhi + Aloo jeera + Chapati + Rice 🍚 + Fried mirchi + Papad + Masala onion + Lemon 🍋",
+        "Snacks": "Poha/Namkeen jave + Sauce + Roohafza 🥤",
+        "Dinner": "Matar chhole + Aloo tikki + Curd + Rice 🍚 OR Dum aloo/Mix veg + Ice cream 🍨"
     },
     "Thursday": {
-        "Breakfast": "🍽️ Plain Parantha + Aloo Jeera Dry + Tea + Milk + Fruit",
-        "Lunch": "🍛 Aloo with Tomato + Baingan + Rice + Salad with Onion + 1/2 Lemon",
-        "Snacks": "🍝 Macroni + Sauce (Tomato + Green Chilli) + Roohafza",
-        "Dinner": "🍚 Chhole + Aloo with Tomato + Chapati + Rice + Salad + Ice Cream"
+        "Breakfast": "Plain parantha + Aloo jeera + Tea ☕ + Milk + Fruit 🍊",
+        "Lunch": "Arhar daal + Aloo baingan + Rice 🍚 + Salad 🥗 + Lemon 🍋",
+        "Snacks": "Macaroni + Sauce + Roohafza 🥤",
+        "Dinner": "Chhole + Aloo tamatar + Chapati + Rice 🍚 + Ice cream 🍨 + Salad"
     },
     "Friday": {
-        "Breakfast": "🍽️ Pav Bhaji with Butter + Tea + Milk + Fruit",
-        "Lunch": "🍛 Rawa + Aloo Jeera with Rassbhari (Pasaa) + Rice + Chapati + Salad + 1/2 Lemon",
-        "Snacks": "🍛 Black Chana Chat + Chhathi + Tea",
-        "Dinner": "🍚 Louki Kofta + Masoor Dal + Kathal/Matar Mushroom + Rice + Chapati + Ice Cream + Salad"
+        "Breakfast": "Pav bhaji + Tea ☕ + Milk + Fruit 🍐",
+        "Lunch": "Rajma + Aloo jeera + Meethi (pasaa) + Rice 🍚 + Curd + Salad 🥗",
+        "Snacks": "Black chana chaat + Coffee ☕",
+        "Dinner": "Lauki kofta + Masoor daal + Veg curry + Rice 🍚 + Chapati + Ice cream 🍨 OR Methi aloo + Salad"
     },
     "Saturday": {
-        "Breakfast": "🍽️ Aloo Parantha + Pickle + Curd + Tea + Milk + Pickle + Fruit",
-        "Lunch": "🍛 Black Chana + Lauki Kofta + Chapati + Rice + Kacha Salad with Onion + 1/2 Lemon",
-        "Snacks": "🥟 Samosa -1 Pc (Big Size) + Chhathi + Tea",
-        "Dinner": "🍚 Lauki Chana Dal + Arbi + Chapati + Rice + Fruit + Rajma Masala Chaach"
+        "Breakfast": "Aloo parantha + Green chutni + Tea ☕ + Milk + Pickle + Fruit 🍎",
+        "Lunch": "Black chana + Lauki kofta + Chapati + Rice 🍚 + Veg raita + Salad 🥗 + Lemon 🍋",
+        "Snacks": "Samosa + Saunth + Green chutni + Tea ☕",
+        "Dinner": "Pulav + Dahi aloo + Salad 🥗 + Custard 🍮 + Masala chaach"
     },
     "Sunday": {
-        "Breakfast": "🍽️ Aloo Tomato Sabji (Bhandare wali) + Poodi + Tea + Milk + Fruit",
-        "Lunch": "🍛 Chhole Masala + Aloo + Boondi Raita + Salad + Chapati + Onion + 1/2 Lemon",
-        "Snacks": "🚫 OFF",
-        "Dinner": "🍚 Lauki Chana Dal + Arbi + Chapati + Rice + Fruit + Rajma Masala Chaach"
+        "Breakfast": "Aloo tamatar sabji + Poori + Tea ☕ + Milk + Pickle + Fruit 🍌",
+        "Lunch": "Chhole masala + Aloo pyaz + Chapati + Rice 🍚 + Boondi raita + Salad 🥗 + Lemon 🍋",
+        "Snacks": "OFF ❌",
+        "Dinner": "Lauki chana daal + Arbi + Chapati + Rice 🍚 + Fruit + Custard 🍮 + Masala chaach"
     }
 }
 
