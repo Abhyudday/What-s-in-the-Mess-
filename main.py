@@ -97,8 +97,18 @@ def get_current_or_next_meal():
 
 def build_main_buttons():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 What's in Mess", callback_data="next_meal")],
-        [InlineKeyboardButton("🔔 Toggle 15-min Notifications", callback_data="toggle_updates")]
+        [InlineKeyboardButton("🍽️ Today's Menu", callback_data="next_meal")],
+        [InlineKeyboardButton("📅 View Other Days", callback_data="choose_day")],
+        [InlineKeyboardButton("🔔 Notifications", callback_data="notification_settings")]
+    ])
+
+def build_notification_buttons(user_id):
+    settings = get_user_settings(user_id)
+    is_enabled = settings[1] if settings else False
+    status_emoji = "✅" if is_enabled else "❌"
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"{status_emoji} 15-min Notifications: {'ON' if is_enabled else 'OFF'}", callback_data="toggle_updates")],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
     ])
 
 def build_meal_buttons():
@@ -111,8 +121,7 @@ def build_meal_buttons():
             InlineKeyboardButton("🍪 Snacks", callback_data="Snacks"),
             InlineKeyboardButton("🍽️ Dinner", callback_data="Dinner")
         ],
-        [InlineKeyboardButton("📅 Choose a Day", callback_data="choose_day")],
-        [InlineKeyboardButton("🔙 Back", callback_data="back_to_main")]
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")]
     ])
 
 def build_day_buttons():
@@ -123,7 +132,7 @@ def build_day_buttons():
         if i + 1 < len(days):
             row.append(InlineKeyboardButton(days[i + 1], callback_data=f"day_{days[i + 1]}"))
         kb.append(row)
-    kb.append([InlineKeyboardButton("🔙 Back", callback_data="back_to_main")])
+    kb.append([InlineKeyboardButton("🔙 Back to Menu", callback_data="back_to_main")])
     return InlineKeyboardMarkup(kb)
 
 def build_time_buttons():
@@ -149,7 +158,10 @@ async def save_user_info(update: Update):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await save_user_info(update)
     await update.message.reply_text(
-        "👋 Welcome to the Mess Bot!",
+        "👋 Welcome to the Mess Bot!\n\n"
+        "🍽️ Check today's menu or view other days\n"
+        "🔔 Get notified 15 minutes before each meal\n\n"
+        "What would you like to do?",
         reply_markup=build_main_buttons()
     )
 
@@ -203,6 +215,17 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Save user info on any interaction
     await save_user_info(update)
 
+    # Handle notification settings
+    if data == "notification_settings":
+        await query.edit_message_text(
+            "🔔 *Notification Settings*\n\n"
+            "Get notified 15 minutes before each meal time.\n"
+            "Toggle the button below to enable/disable notifications.",
+            parse_mode="Markdown",
+            reply_markup=build_notification_buttons(update.effective_user.id)
+        )
+        return
+
     # Handle auto-update toggle
     if data == "toggle_updates":
         user_id = update.effective_user.id
@@ -213,8 +236,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         status = "enabled" if not current_status else "disabled"
         
         await query.edit_message_text(
-            f"🔔 15-minute notifications have been {status}!\n",
-            reply_markup=build_main_buttons()
+            f"🔔 *Notification Settings*\n\n"
+            f"Notifications have been {status}!\n"
+            f"You will receive notifications 15 minutes before each meal.",
+            parse_mode="Markdown",
+            reply_markup=build_notification_buttons(user_id)
         )
         return
 
@@ -222,7 +248,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "back_to_main":
         context.user_data.pop("selected_day", None)
         await query.edit_message_text(
-            "👋 Welcome back! What would you like?",
+            "👋 Welcome back! What would you like to do?",
             reply_markup=build_main_buttons()
         )
         return
@@ -238,7 +264,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # choose day
     if data == "choose_day":
-        await query.edit_message_text("📅 *Choose a day:*", parse_mode="Markdown", reply_markup=build_day_buttons())
+        await query.edit_message_text(
+            "📅 *Choose a day to view its menu:*",
+            parse_mode="Markdown",
+            reply_markup=build_day_buttons()
+        )
         return
 
     # day selected
