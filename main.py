@@ -5,6 +5,8 @@ import pytz
 import os
 import sys
 import logging
+import asyncio
+import aiohttp
 from db import init_db, save_user, get_all_users, update_notification_settings, get_user_settings
 import psutil
 
@@ -18,6 +20,12 @@ logger = logging.getLogger(__name__)
 BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
 # Track last notification sent to prevent duplicates
 last_notification = {}
+
+# Uptime monitoring URLs (you can add multiple services)
+UPTIME_URLS = [
+    "https://uptime.betterstack.com/api/v1/heartbeat/your-heartbeat-id",  # Replace with your actual uptime URL
+    "https://api.uptimerobot.com/v2/getMonitors",  # Example uptime robot
+]
 
 # Mess timetable
 meal_schedule = {
@@ -79,11 +87,11 @@ girls_menu = {
         "Breakfast": "Matar with cucumber & onion + Kulcha + Tea ☕ + Milk + Fruit 🍎",
         "Lunch": "Arhar Daal + Mix veg with paneer + Boondi raita + Rice 🍚 + Chapati + Salad 🥗 + 1/2 Lemon 🍋",
         "Snacks": "Bread pakoda/Mix pakodi + Tomato sauce + Green chutni + Tea ☕ (Green elaichi)",
-        "Dinner": "Butter masala/Matar paneer + Aloo chokha + Chapati + Rice + Sweet 🍬"
+        "Dinner": "Butter masala/Matar paneer + Aloo chokha + Chapati + Rice + Bessan Laddu/Jalebi + Masala chaach 🍬"
     },
     "Tuesday": {
         "Breakfast": "Fried idli + Sambhar + Nariyal chutni + Tea ☕ + Milk + Fruit 🍌",
-        "Lunch": "Rajma/French beans + Aloo tamatar + Rice 🍚 + Curd + Salad 🥗 + 1/2 Lemon 🍋",
+        "Lunch": "Rajma + French beans + Aloo tamatar + Rice 🍚 + Curd + Salad 🥗 + 1/2 Lemon 🍋",
         "Snacks": "Chowmein + Tomato & green chilli sauce + Tang 🥤",
         "Dinner": "Tamatar-Aloo-Paneer + Chapati + Rice 🍚 + Gulab jamun 🍩 + Chaach"
     },
@@ -269,6 +277,23 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     # Clean up old notification records
     last_notification.clear()
 
+async def uptime_ping():
+    """Send ping to uptime monitoring services to keep the bot alive"""
+    async with aiohttp.ClientSession() as session:
+        for url in UPTIME_URLS:
+            try:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        logger.info(f"Uptime ping successful to {url}")
+                    else:
+                        logger.warning(f"Uptime ping failed to {url} with status {response.status}")
+            except Exception as e:
+                logger.error(f"Failed to ping {url}: {e}")
+
+async def uptime_job(context: ContextTypes.DEFAULT_TYPE):
+    """Job to send uptime pings every 5 minutes"""
+    await uptime_ping()
+
 async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data
@@ -452,6 +477,8 @@ if __name__ == "__main__":
             job_queue = app.job_queue
             if job_queue is not None:
                 job_queue.run_repeating(send_meal_notification, interval=60, first=10)
+                # Add uptime ping job every 5 minutes
+                job_queue.run_repeating(uptime_job, interval=300, first=30)  # 5 minutes = 300 seconds
                 logger.info("Job queue started successfully")
             else:
                 logger.warning("Job queue is not available. Auto-updates will not work.")
@@ -463,7 +490,7 @@ if __name__ == "__main__":
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("broadcast", broadcast))
         app.add_handler(CommandHandler("kitne", get_user_count))
-        logger.info("Bot started")
+        logger.info("Bot started with uptime monitoring")
         app.run_polling()
     except Exception as e:
         logger.error(f"Bot crashed: {e}")
