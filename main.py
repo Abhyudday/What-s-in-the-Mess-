@@ -471,7 +471,7 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"📢 *Personalized Message:*\n\n{personalized_message}",
+                text=personalized_message,
                 parse_mode="Markdown"
             )
             success += 1
