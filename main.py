@@ -7,7 +7,7 @@ import sys
 import logging
 import asyncio
 import aiohttp
-from db import init_db, save_user, get_all_users, update_notification_settings, get_user_settings
+from db import init_db, save_user, get_all_users, update_notification_settings, get_user_settings, get_user_details, get_all_users_with_details
 import psutil
 
 # Set up logging
@@ -433,22 +433,45 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     users = get_all_users()
     success = 0
     failed = 0
+    user_details = []
     
     for user_id in users:
         try:
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"{message}",
+                text=f"📢 *Broadcast Message:*\n\n{message}",
                 parse_mode="Markdown"
             )
             success += 1
+            # Get user details for reporting
+            user_info = get_user_details(user_id)
+            if user_info:
+                name = user_info.get('first_name', 'Unknown')
+                username = user_info.get('username', 'No username')
+                user_details.append(f"✅ {name} (@{username})")
+            else:
+                user_details.append(f"✅ User {user_id}")
         except Exception as e:
             logger.error(f"Failed to send broadcast to {user_id}: {e}")
             failed += 1
+            user_details.append(f"❌ User {user_id} (Failed)")
     
-    await update.message.reply_text(
-        f"Broadcast completed!\n✅ Successfully sent: {success}\n❌ Failed: {failed}"
-    )
+    # Create detailed report
+    report = f"📢 *Broadcast Report*\n\n"
+    report += f"📝 *Message:* {message}\n\n"
+    report += f"📊 *Summary:*\n"
+    report += f"✅ Successfully sent: {success}\n"
+    report += f"❌ Failed: {failed}\n"
+    report += f"📋 *Recipients:*\n"
+    
+    # Add user details (limit to first 20 to avoid message too long)
+    for i, detail in enumerate(user_details[:20]):
+        report += f"{detail}\n"
+    
+    if len(user_details) > 20:
+        report += f"... and {len(user_details) - 20} more users\n"
+    
+    await update.message.reply_text(report, parse_mode="Markdown")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle custom time input"""
@@ -483,6 +506,33 @@ async def get_user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Hidden command to get total number of users"""
     users = get_all_users()
     await update.message.reply_text(f"👥 Total users: {len(users)}")
+
+async def list_users(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Hidden command to list all users with their details"""
+    users = get_all_users_with_details()
+    
+    if not users:
+        await update.message.reply_text("📋 No users found in the database.")
+        return
+    
+    report = f"📋 *User List ({len(users)} users)*\n\n"
+    
+    for i, user in enumerate(users, 1):
+        name = user.get('first_name', 'Unknown')
+        last_name = user.get('last_name', '')
+        username = user.get('username', 'No username')
+        auto_updates = "✅" if user.get('auto_updates') else "❌"
+        
+        full_name = f"{name} {last_name}".strip()
+        report += f"{i}. {full_name} (@{username}) {auto_updates}\n"
+        
+        # Split into multiple messages if too long
+        if i % 15 == 0 and i < len(users):
+            await update.message.reply_text(report, parse_mode="Markdown")
+            report = ""
+    
+    if report:
+        await update.message.reply_text(report, parse_mode="Markdown")
 
 if __name__ == "__main__":
     try:
@@ -519,6 +569,7 @@ if __name__ == "__main__":
         app.add_handler(CallbackQueryHandler(button_handler))
         app.add_handler(CommandHandler("broadcast", broadcast))
         app.add_handler(CommandHandler("kitne", get_user_count))
+        app.add_handler(CommandHandler("list_users", list_users))
         logger.info("Bot started with uptime monitoring")
         app.run_polling()
     except Exception as e:

@@ -186,4 +186,66 @@ def get_user_settings(user_id):
         print(f"Error getting user settings: {e}")
         return (15, False)
     finally:
-        connection_pool.putconn(conn) 
+        connection_pool.putconn(conn)
+
+def get_user_details(user_id):
+    """Get user details by user ID"""
+    try:
+        conn = connection_pool.getconn()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT username, first_name, last_name, auto_updates, notification_time
+            FROM users 
+            WHERE user_id = %s
+        """, (user_id,))
+        
+        result = cursor.fetchone()
+        cursor.close()
+        connection_pool.putconn(conn)
+        
+        if result:
+            return {
+                'username': result[0],
+                'first_name': result[1],
+                'last_name': result[2],
+                'auto_updates': result[3],
+                'notification_time': result[4]
+            }
+        return None
+        
+    except Exception as e:
+        logger.error(f"Error getting user details for {user_id}: {e}")
+        return None
+
+def get_all_users_with_details():
+    """Get all users with their details"""
+    try:
+        conn = connection_pool.getconn()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT user_id, username, first_name, last_name, auto_updates, notification_time
+            FROM users 
+            ORDER BY first_name, username
+        """)
+        
+        results = cursor.fetchall()
+        cursor.close()
+        connection_pool.putconn(conn)
+        
+        users = []
+        for result in results:
+            users.append({
+                'user_id': result[0],
+                'username': result[1],
+                'first_name': result[2],
+                'last_name': result[3],
+                'auto_updates': result[4],
+                'notification_time': result[5]
+            })
+        return users
+        
+    except Exception as e:
+        logger.error(f"Error getting all users with details: {e}")
+        return [] 
