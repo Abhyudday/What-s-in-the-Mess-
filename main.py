@@ -17,12 +17,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Bot token - can be set via environment variable
-BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
+# Bot token - get from environment variable (Railway secrets)
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 # Validate bot token
-if not BOT_TOKEN or BOT_TOKEN == "your_bot_token_here":
-    logger.error("Invalid bot token! Please set a valid BOT_TOKEN environment variable.")
+if not BOT_TOKEN:
+    logger.error("BOT_TOKEN environment variable is not set! Please set it in Railway secrets.")
     sys.exit(1)
 
 # Track last notification sent to prevent duplicates

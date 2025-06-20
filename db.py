@@ -1,10 +1,19 @@
 import psycopg2
 from psycopg2 import pool
 import os
+import logging
 
-# Database configuration - using Railway PostgreSQL URL
-# You can also set these as environment variables
-DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:lYHvrGIWEvlneKyJuPohebsjqbaXikuV@postgres.railway.internal:5432/railway')
+# Set up logger
+logger = logging.getLogger(__name__)
+
+# Database configuration - using Railway PostgreSQL URL from environment variables
+# Railway automatically provides DATABASE_URL environment variable
+DB_URL = os.getenv('DATABASE_URL')
+
+if not DB_URL:
+    logger.error("DATABASE_URL environment variable is not set! Please check your Railway database configuration.")
+    # Fallback to default values (for local development)
+    DB_URL = 'postgresql://postgres:lYHvrGIWEvlneKyJuPohebsjqbaXikuV@postgres.railway.internal:5432/railway'
 
 # Parse the database URL
 def parse_db_url(db_url):

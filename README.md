@@ -15,8 +15,8 @@ A Telegram bot that provides mess menu information and notifications for meal ti
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/AbhyuddayAlt/What-s-in-Mess-Bot.git
-cd What-s-in-Mess-Bot
+git clone https://github.com/Abhyudday/What-s-in-the-Mess-.git
+cd What-s-in-the-Mess-
 ```
 
 2. Install dependencies:
@@ -24,7 +24,9 @@ cd What-s-in-Mess-Bot
 pip install -r requirements.txt
 ```
 
-3. Set up your Railway app and get your app URL
+3. Set up environment variables (for Railway deployment):
+   - `BOT_TOKEN`: Your Telegram bot token from @BotFather
+   - `DATABASE_URL`: Railway automatically provides this for PostgreSQL
 
 4. Configure uptime monitoring (see section below)
 
@@ -32,6 +34,23 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+## Railway Deployment
+
+### Environment Variables
+Railway automatically handles most configuration, but you need to set:
+
+1. **BOT_TOKEN**: Your Telegram bot token
+   - Get it from @BotFather on Telegram
+   - Set it in Railway secrets/environment variables
+
+2. **DATABASE_URL**: Automatically provided by Railway when you add PostgreSQL
+
+### Deployment Steps
+1. Connect your GitHub repository to Railway
+2. Add PostgreSQL database service
+3. Set the `BOT_TOKEN` environment variable
+4. Deploy the application
 
 ## Uptime Monitoring Setup
 
@@ -71,18 +90,18 @@ Update the URLs in `uptime.py` with your actual Railway app URL and uptime servi
 
 ## Configuration
 
-### Database Configuration
-The bot uses PostgreSQL. Update the database credentials in `db.py`:
-```python
-DB_NAME = 'your_db_name'
-DB_USER = 'your_db_user'
-DB_PASSWORD = 'your_db_password'
-DB_HOST = 'your_db_host'
-DB_PORT = '5432'
+### Local Development
+For local development, you can set environment variables in a `.env` file:
+```
+BOT_TOKEN=your_telegram_bot_token
+DATABASE_URL=your_database_url
 ```
 
-### Bot Token
-Update the `BOT_TOKEN` in `main.py` with your Telegram bot token.
+### Railway Deployment
+Railway automatically handles environment variables through their dashboard:
+- Go to your Railway app settings
+- Add environment variables in the "Variables" tab
+- Railway automatically provides `DATABASE_URL` for PostgreSQL
 
 ## Usage
 
@@ -106,13 +125,6 @@ Update the `BOT_TOKEN` in `main.py` with your Telegram bot token.
 - **Lunch**: 12:20 PM - 2:00 PM
 - **Snacks**: 5:00 PM - 6:00 PM
 - **Dinner**: 7:30 PM - 9:00 PM
-
-## Deployment on Railway
-
-1. Connect your GitHub repository to Railway
-2. Set up PostgreSQL database
-3. Configure environment variables if needed
-4. Deploy the application
 
 ## Contributing
 
