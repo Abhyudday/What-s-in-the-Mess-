@@ -424,12 +424,22 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Send a broadcast message to all users"""
+    """Send a personalized broadcast message to all users"""
     if not context.args:
-        await update.message.reply_text("Please provide a message to broadcast.")
+        await update.message.reply_text(
+            "Please provide a message to broadcast.\n\n"
+            "Personalization variables:\n"
+            "• <user name> - User's first name\n"
+            "• <username> - User's username\n"
+            "• <full name> - User's full name\n\n"
+            "Examples:\n"
+            "• /broadcast Hi <user name>, how are you?\n"
+            "• /broadcast Hello @<username>, check out the new menu!\n"
+            "• /broadcast Good morning <full name>! 🌅"
+        )
         return
         
-    message = " ".join(context.args)
+    message_template = " ".join(context.args)
     users = get_all_users()
     success = 0
     failed = 0
@@ -437,28 +447,43 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     for user_id in users:
         try:
+            # Get user details for personalization
+            user_info = get_user_details(user_id)
+            if user_info:
+                first_name = user_info.get('first_name', 'User')
+                last_name = user_info.get('last_name', '')
+                username = user_info.get('username', 'user')
+                full_name = f"{first_name} {last_name}".strip()
+                
+                # Personalize the message with multiple variables
+                personalized_message = message_template
+                personalized_message = personalized_message.replace('<user name>', first_name)
+                personalized_message = personalized_message.replace('<username>', username)
+                personalized_message = personalized_message.replace('<full name>', full_name)
+                
+                user_details.append(f"✅ {first_name} (@{username})")
+            else:
+                personalized_message = message_template
+                personalized_message = personalized_message.replace('<user name>', 'User')
+                personalized_message = personalized_message.replace('<username>', 'user')
+                personalized_message = personalized_message.replace('<full name>', 'User')
+                user_details.append(f"✅ User {user_id}")
+            
             await context.bot.send_message(
                 chat_id=user_id,
-                text=f"📢 *Broadcast Message:*\n\n{message}",
+                text=f"📢 *Personalized Message:*\n\n{personalized_message}",
                 parse_mode="Markdown"
             )
             success += 1
-            # Get user details for reporting
-            user_info = get_user_details(user_id)
-            if user_info:
-                name = user_info.get('first_name', 'Unknown')
-                username = user_info.get('username', 'No username')
-                user_details.append(f"✅ {name} (@{username})")
-            else:
-                user_details.append(f"✅ User {user_id}")
+            
         except Exception as e:
             logger.error(f"Failed to send broadcast to {user_id}: {e}")
             failed += 1
             user_details.append(f"❌ User {user_id} (Failed)")
     
     # Create detailed report
-    report = f"📢 *Broadcast Report*\n\n"
-    report += f"📝 *Message:* {message}\n\n"
+    report = f"📢 *Personalized Broadcast Report*\n\n"
+    report += f"📝 *Message Template:* {message_template}\n\n"
     report += f"📊 *Summary:*\n"
     report += f"✅ Successfully sent: {success}\n"
     report += f"❌ Failed: {failed}\n"
