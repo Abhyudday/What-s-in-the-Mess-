@@ -1,27 +1,75 @@
 import psycopg2
 from psycopg2 import pool
+import os
 
-# Database configuration
-DB_NAME = 'railway'
-DB_USER = 'postgres'
-DB_PASSWORD = 'lYHvrGIWEvlneKyJuPohebsjqbaXikuV'
-DB_HOST = 'postgres.railway.internal'
-DB_PORT = '5432'
+# Database configuration - using Railway PostgreSQL URL
+# You can also set these as environment variables
+DB_URL = os.getenv('DATABASE_URL', 'postgresql://postgres:lYHvrGIWEvlneKyJuPohebsjqbaXikuV@postgres.railway.internal:5432/railway')
 
-# Create a connection pool
-connection_pool = pool.SimpleConnectionPool(
-    1,  # minconn
-    10,  # maxconn
-    dbname=DB_NAME,
-    user=DB_USER,
-    password=DB_PASSWORD,
-    host=DB_HOST,
-    port=DB_PORT
-)
+# Parse the database URL
+def parse_db_url(db_url):
+    """Parse database URL to extract connection parameters"""
+    try:
+        # Remove postgresql:// prefix
+        url = db_url.replace('postgresql://', '')
+        # Split into user:pass@host:port/dbname
+        auth_part, rest = url.split('@')
+        user_pass = auth_part.split(':')
+        user = user_pass[0]
+        password = user_pass[1] if len(user_pass) > 1 else ''
+        
+        host_port_db = rest.split('/')
+        host_port = host_port_db[0].split(':')
+        host = host_port[0]
+        port = host_port[1] if len(host_port) > 1 else '5432'
+        dbname = host_port_db[1] if len(host_port_db) > 1 else 'railway'
+        
+        return {
+            'dbname': dbname,
+            'user': user,
+            'password': password,
+            'host': host,
+            'port': port
+        }
+    except Exception as e:
+        print(f"Error parsing database URL: {e}")
+        # Fallback to default values
+        return {
+            'dbname': 'railway',
+            'user': 'postgres',
+            'password': 'lYHvrGIWEvlneKyJuPohebsjqbaXikuV',
+            'host': 'postgres.railway.internal',
+            'port': '5432'
+        }
+
+# Parse database configuration
+db_config = parse_db_url(DB_URL)
+
+# Create a connection pool with error handling
+try:
+    connection_pool = pool.SimpleConnectionPool(
+        1,  # minconn
+        10,  # maxconn
+        **db_config
+    )
+    print(f"Database connection pool created successfully")
+except Exception as e:
+    print(f"Failed to create database connection pool: {e}")
+    connection_pool = None
+
+def get_connection():
+    """Get a database connection with error handling"""
+    if connection_pool is None:
+        raise Exception("Database connection pool not available")
+    return connection_pool.getconn()
 
 def init_db():
     """Initialize the database and create necessary tables"""
-    conn = connection_pool.getconn()
+    if connection_pool is None:
+        print("Database connection pool not available, skipping initialization")
+        return
+        
+    conn = get_connection()
     try:
         with conn.cursor() as cur:
             # Create users table if it doesn't exist
@@ -37,6 +85,7 @@ def init_db():
                 )
             """)
             conn.commit()
+            print("Database initialized successfully")
     except Exception as e:
         print(f"Error initializing database: {e}")
         raise
@@ -45,7 +94,11 @@ def init_db():
 
 def save_user(user_id, username=None, first_name=None, last_name=None):
     """Save or update user information"""
-    conn = connection_pool.getconn()
+    if connection_pool is None:
+        print("Database not available, skipping user save")
+        return
+        
+    conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("""
@@ -67,7 +120,11 @@ def save_user(user_id, username=None, first_name=None, last_name=None):
 
 def get_all_users():
     """Get all user IDs from the database"""
-    conn = connection_pool.getconn()
+    if connection_pool is None:
+        print("Database not available, returning empty user list")
+        return []
+        
+    conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT user_id FROM users")
@@ -80,7 +137,11 @@ def get_all_users():
 
 def update_notification_settings(user_id, auto_updates=None):
     """Update user's notification settings"""
-    conn = connection_pool.getconn()
+    if connection_pool is None:
+        print("Database not available, skipping notification settings update")
+        return
+        
+    conn = get_connection()
     try:
         with conn.cursor() as cur:
             if auto_updates is not None:
@@ -98,7 +159,11 @@ def update_notification_settings(user_id, auto_updates=None):
 
 def get_user_settings(user_id):
     """Get user's notification settings"""
-    conn = connection_pool.getconn()
+    if connection_pool is None:
+        print("Database not available, returning default settings")
+        return (15, False)
+        
+    conn = get_connection()
     try:
         with conn.cursor() as cur:
             cur.execute("""
@@ -107,9 +172,9 @@ def get_user_settings(user_id):
                 WHERE user_id = %s
             """, (user_id,))
             result = cur.fetchone()
-            return (15, result[0]) if result else None
+            return (15, result[0]) if result else (15, False)
     except Exception as e:
         print(f"Error getting user settings: {e}")
-        return None
+        return (15, False)
     finally:
         connection_pool.putconn(conn) 

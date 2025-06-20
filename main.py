@@ -462,8 +462,13 @@ async def get_user_count(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == "__main__":
     try:
-        # Initialize database
-        init_db()
+        # Initialize database with error handling
+        try:
+            init_db()
+            logger.info("Database initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            logger.warning("Bot will run without database functionality")
         
         # Check if bot is already running
         if is_bot_running():
