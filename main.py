@@ -17,14 +17,22 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN = "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ"
+# Bot token - can be set via environment variable
+BOT_TOKEN = os.getenv('BOT_TOKEN', "7265497857:AAFAfZEgGwMlA3GTR3xQv7G-ah0-hoA8jVQ")
+
+# Validate bot token
+if not BOT_TOKEN or BOT_TOKEN == "your_bot_token_here":
+    logger.error("Invalid bot token! Please set a valid BOT_TOKEN environment variable.")
+    sys.exit(1)
+
 # Track last notification sent to prevent duplicates
 last_notification = {}
 
 # Uptime monitoring URLs (you can add multiple services)
 UPTIME_URLS = [
-    "https://uptime.betterstack.com/api/v1/heartbeat/your-heartbeat-id",  # Replace with your actual uptime URL
-    "https://api.uptimerobot.com/v2/getMonitors",  # Example uptime robot
+    # Add your actual uptime service URLs here
+    # "https://uptime.betterstack.com/api/v1/heartbeat/your-heartbeat-id",
+    # "https://api.uptimerobot.com/v2/getMonitors",
 ]
 
 # Mess timetable
@@ -277,18 +285,34 @@ async def send_meal_notification(context: ContextTypes.DEFAULT_TYPE):
     # Clean up old notification records
     last_notification.clear()
 
+# Simple uptime ping to keep the bot alive
+async def simple_uptime_ping():
+    """Simple uptime ping to keep the bot alive"""
+    try:
+        # Just log that we're alive
+        logger.info("🔄 Bot is alive and running - uptime ping sent")
+    except Exception as e:
+        logger.error(f"Failed to send simple uptime ping: {e}")
+
 async def uptime_ping():
     """Send ping to uptime monitoring services to keep the bot alive"""
-    async with aiohttp.ClientSession() as session:
-        for url in UPTIME_URLS:
-            try:
-                async with session.get(url) as response:
-                    if response.status == 200:
-                        logger.info(f"Uptime ping successful to {url}")
-                    else:
-                        logger.warning(f"Uptime ping failed to {url} with status {response.status}")
-            except Exception as e:
-                logger.error(f"Failed to ping {url}: {e}")
+    # Always send simple ping
+    await simple_uptime_ping()
+    
+    # Send pings to external services if configured
+    if UPTIME_URLS:
+        async with aiohttp.ClientSession() as session:
+            for url in UPTIME_URLS:
+                try:
+                    async with session.get(url, timeout=10) as response:
+                        if response.status == 200:
+                            logger.info(f"✅ Uptime ping successful to {url}")
+                        else:
+                            logger.warning(f"⚠️ Uptime ping failed to {url} with status {response.status}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to ping {url}: {e}")
+    else:
+        logger.info("ℹ️ No external uptime services configured - using simple ping only")
 
 async def uptime_job(context: ContextTypes.DEFAULT_TYPE):
     """Job to send uptime pings every 5 minutes"""
