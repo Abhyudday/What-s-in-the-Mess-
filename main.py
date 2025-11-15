@@ -46,46 +46,46 @@ meal_schedule = {
 # Boys Hostel Menu
 boys_menu = {
     "Monday": {
-        "Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Seasonal Fruits",
-        "Lunch": "🍛 Mix Veg with Paneer + Rajma + Roti + Rice + Salad + Boondi Raita + Lemon 1/2",
-        "Snacks": "🥔 Aloo Tikki / Papdi Chaat (5 pcs) + Matar + Curd + Sonth + Hari Chutney + Chaat Masala + Roohafza",
-        "Dinner": "🍚 Arhar Daal + Bhindi + Rice + Roti + Suji Halwa + (Matar Mushroom (once in a month) / Moong Daal Halwa (once in a month)) + Onion Salad"
+        "Breakfast": "🍽️ Matar + Kulche + Milk + Tea + Fruit",
+        "Lunch": "🍛 Mix Veg with Paneer + Arhar Dal + Rice + Roti + Boondi Raita + Salad + Lemon 1/2",
+        "Snacks": "🥔 Aloo Patties + Tomato Chilli Sauce + Tea",
+        "Dinner": "🍚 Rajma + Aloo Soyabean + Roti + Rice + Kheer/Sewai + Tomato Soup"
     },
     "Tuesday": {
-        "Breakfast": "🍽️ Matar Kulche + Pickle + Tea + Milk + Seasonal Fruits",
-        "Lunch": "🍛 Tahari + Aloo Tamatar Sabji + Roti + Salad + Curd + Lemon 1/2 + Hari Chutney",
-        "Snacks": "🍝 Chowmein / Pasta + Tomato Sauce + Chilli Sauce + Shikanji",
-        "Dinner": "🍚 Kali Masoor Daal + Kathal + Rice + Roti + Ice Cream (Mango / Butterscotch / Vanilla) + Onion Salad"
+        "Breakfast": "🍽️ Gobhi Paratha + Achar + Milk + Tea + Fruit",
+        "Lunch": "🍛 Aloo Gobhi + Rajma + Roti + Rice + Curd + Salad + Lemon 1/2",
+        "Snacks": "🍝 Macroni + Chilli & Tomato Sauce + Coffee",
+        "Dinner": "🍚 Arhar Dal + Aloo Palak + Rice + Roti + Gulab Jamun + Sweetcorn Soup"
     },
     "Wednesday": {
-        "Breakfast": "🍽️ Aloo Paratha + Pickle + Curd + Milk + Tea + Seasonal Fruits",
-        "Lunch": "🍛 Kaabli Chhole (Small) + Kashifal + Roti + Jeera Rice + Mix Salad + Curd + Lemon 1/2",
-        "Snacks": "🥟 Samosa + Chilli Sauce + Sonth + Tea",
-        "Dinner": "🍚 (Mattar / Kadhi) Paneer + Aloo Began Tamatar Chokha + Puri + Pulav + Onion Salad"
+        "Breakfast": "🍽️ Pav Bhaji + Butter + Tea + Milk + Fruit",
+        "Lunch": "🍛 Aloo Pyaaj Sabji + Kadhi + Rice + Roti + Salad + Papad + Fried Lemon 1/2",
+        "Snacks": "🥟 Mix Pakodi + Chilli & Tomato Sauce + Tea",
+        "Dinner": "🍚 Plain Paratha + Kala Chana + Mix Veg + Rice + Custard + Veg Soup"
     },
     "Thursday": {
-        "Breakfast": "🍽️ Pav Bhaji + Tea + Milk + Butter + Seasonal Fruits",
-        "Lunch": "🍛 Aloo Pyaaj + Kadhi + Rice + Roti + Salad + Fried Papad + Lemon 1/2",
-        "Snacks": "🍞 Bread Pakoda / Rusk (5 pcs) + Sonath + Hari Chatney + Tea",
-        "Dinner": "🍚 Chana Daal + Aloo Parval + Roti + Rice + Gulab Jamun + Masala Chaach"
+        "Breakfast": "🍽️ Aloo Pyaaj Paratha + Curd + Pickle + Tea + Fruit",
+        "Lunch": "🍛 Aloo Methi + Chana Dal + Roti + Rice + Salad + Lemon 1/2 + Boondi Raita",
+        "Snacks": "🍞 Bread Pakoda + Hari Chutney + Sonth + Tea",
+        "Dinner": "🍚 Kadhi + Matar Paneer + Aloo Chokha + Jeera Rice + Roti/Puri + Masala Milk + Sirka Pyaaz"
     },
     "Friday": {
-        "Breakfast": "🍽️ Aloo Paratha + Pickle + Curd + Tea + Milk + Seasonal Fruits",
-        "Lunch": "🍛 Aloo Gobhi Mattar + Arhar Daal + Roti + Rice + Mix Salad + Boondi Raita + Lemon 1/2",
-        "Snacks": "🥙 Patties + Tomato Sauce + Tea",
-        "Dinner": "🍚 Arhar Daal + Aloo Soyabeen / Karela + Rice + Roti + Besan Ladoo + Masala Chaach"
+        "Breakfast": "🍽️ Veg Fried Idli + Plain Idli + Sambhar + Coconut Chutney + Tea + Milk + Fruit",
+        "Lunch": "🍛 Chhole + Kashifal + Roti + Jeera Rice + Salad + Curd + Lemon 1/2",
+        "Snacks": "🥙 Aloo Tikki / Chat Papdi + Tea",
+        "Dinner": "🍚 Arhar Dal + Aloo Gobhi Matar + Sweetcorn Soup + Ice Cream (Butterscotch/Chocolate/Mango) + Matar Mushroom / Moong Dal Halwa (once in a month)"
     },
     "Saturday": {
-        "Breakfast": "🍽️ Aloo Tamatar Sabji + Ajwain Poori + Fry Mirchi + Tea + Jalebi + Curd + Seasonal Fruits",
-        "Lunch": "🍛 Louki Dry + Arhar Daal + Roti + Rice + Salad + Curd + Lemon 1/2",
-        "Snacks": "🥔 Poha + Chilli Sauce + Tomato Sauce + Chaat Masala + Shikanji",
-        "Dinner": "🍚 Rajma + Aloo Bhujia + Jeera Rice + Roti + Masala Chaach"
+        "Breakfast": "🍽️ Aloo Tamatar Sabji + Ajwain Puri + Tea + Jalebi + Curd + Pickle + Fruit",
+        "Lunch": "🍛 Aloo Matar Gazar + Kali Masoor Dal + Tehri + Roti + Boondi Raita + Salad + Lemon 1/2",
+        "Snacks": "🥟 Samosa + Tea + Hari Chutney",
+        "Dinner": "🍚 Chhole + Aloo Patta Gobhi + Roti + Jeera Rice + Veg Soup"
     },
     "Sunday": {
-        "Breakfast": "🍽️ Roasted Bread + Aloo Sandwich + Tomato Sauce + Cornflakes + Milk + Tea + Seasonal Fruits",
-        "Lunch": "🍛 Chole (Kabuli Chane Big) + Bhature + Fried Mirch + Sirka Pyaaj + Jeera Rice + Cold Drink + Pickle + Veg Raita",
+        "Breakfast": "🍽️ Aloo Paratha + Hari Chutney (Tomato+Hari Dhaniya) + Tomato Sauce + Milk + Tea + Fruit",
+        "Lunch": "🍛 Chhole + Bhature + Jeera Rice + Fry Mirchi + Sirka Pyaaz + Boondi Raita + Cold Drink + Achar",
         "Snacks": "🚫 OFF",
-        "Dinner": "🍚 Mix Daal + Aloo / Kala Chana / Arbi + Roti + Rice + Kheer / Sewai + Onion Salad"
+        "Dinner": "🍚 Arhar Dal + Aloo Matar + Rice + Roti + Tomato Soup + Coconut Laddoo/Gulab Jamun/Coconut Laddoo/Besan Laddoo (Alternate Basis)"
     }
 }
 
